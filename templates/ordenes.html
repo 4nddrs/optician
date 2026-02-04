@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Órdenes de Trabajo - Óptica{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-icon">
+            <i class="fas fa-clipboard-list"></i>
+        </div>
+        <div class="header-text">
+            <h1>Órdenes de Trabajo</h1>
+            <p>Gestión de órdenes</p>
+        </div>
+    </div>
+    <a href="{{ url_for('nueva_orden') }}" class="btn-primary">
+        <i class="fas fa-plus"></i>
+        Nueva Orden
+    </a>
+</div>
+
+<div class="filters-section">
+    <div class="filter-group">
+        <label for="filterEstado"><i class="fas fa-filter"></i> Estado:</label>
+        <select id="filterEstado" class="form-select">
+            <option value="">Todos</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="en_proceso">En Proceso</option>
+            <option value="listo">Listo</option>
+            <option value="entregado">Entregado</option>
+        </select>
+    </div>
+    
+    <div class="filter-group">
+        <label for="filterSucursal"><i class="fas fa-building"></i> Sucursal:</label>
+        <select id="filterSucursal" class="form-select">
+            <option value="">Todas</option>
+            {% for sucursal in sucursales %}
+            <option value="{{ sucursal.id }}">{{ sucursal.nombre }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="filter-group">
+        <label for="searchOrden"><i class="fas fa-search"></i> Buscar:</label>
+        <input type="text" id="searchOrden" class="form-input" placeholder="ID de orden...">
+    </div>
+</div>
+
+<div class="content-section">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID Orden</th>
+                    <th>Correlativo</th>
+                    <th>Sucursal</th>
+                    <th>Cliente</th>
+                    <th>Fecha Creación</th>
+                    <th>Fecha Entrega</th>
+                    <th>Estado</th>
+                    <th>Total</th>
+                    <th>Saldo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="ordenesTableBody">
+                {% for orden in ordenes %}
+                <tr data-estado="{{ orden.estado }}" data-sucursal="{{ orden.id_sucursal }}" data-orden-id="{{ orden.id_orden }}">
+                    <td><strong>{{ orden.id_orden }}</strong></td>
+                    <td>{{ orden.nro_correlativo }}</td>
+                    <td>{{ orden.id_sucursal }}</td>
+                    <td>{{ clientes_dict.get(orden.id_cliente, {}).get('nombre_completo', orden.id_cliente) }}</td>
+                    <td>{{ orden.fecha_creacion[:10] }}</td>
+                    <td>{{ orden.fecha_entrega }}</td>
+                    <td>
+                        <span class="badge badge-{{ orden.estado }}">
+                            {{ orden.estado }}
+                        </span>
+                    </td>
+                    <td>Bs. {{ orden.pagos.total }}</td>
+                    <td>Bs. {{ orden.pagos.saldo }}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('ver_orden', orden_id=orden.id) }}" class="btn-icon view" title="Ver detalles">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button onclick="cambiarEstado('{{ orden.id }}')" class="btn-icon status" title="Cambiar estado">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            {% set cliente = clientes_dict.get(orden.id_cliente, {}) %}
+                            {% if cliente.get('telefono') %}
+                            <a href="javascript:void(0)" 
+                               onclick="enviarWhatsApp('{{ cliente.telefono }}', '{{ cliente.nombre_completo }}', '{{ orden.estado }}', '{{ orden.fecha_entrega }}', '{{ orden.id_orden }}')" 
+                               class="btn-icon whatsapp" 
+                               title="Enviar WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                            {% endif %}
+                            <button onclick="confirmarEliminar('{{ orden.id }}')" class="btn-icon danger" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" class="text-center">No hay órdenes registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Cambiar Estado -->
+<div id="modalEstado" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-sync-alt"></i> Cambiar Estado</h2>
+            <button onclick="closeModal('modalEstado')" class="btn-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="ordenIdEstado">
+            <div class="form-group">
+                <label for="nuevoEstado">Nuevo Estado:</label>
+                <select id="nuevoEstado" class="form-select">
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_proceso">En Proceso</option>
+                    <option value="listo">Listo</option>
+                    <option value="entregado">Entregado</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal('modalEstado')" class="btn-secondary">
+                <i class="fas fa-times"></i>
+                Cancelar
+            </button>
+            <button onclick="guardarEstado()" class="btn-primary">
+                <i class="fas fa-save"></i>
+                Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmar Eliminación -->
+<div id="modalEliminar" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h2>
+            <button onclick="closeModal('modalEliminar')" class="btn-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="ordenIdEliminar">
+            <p>¿Está seguro de que desea eliminar esta orden? Esta acción no se puede deshacer.</p>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal('modalEliminar')" class="btn-secondary">
+                <i class="fas fa-times"></i>
+                Cancelar
+            </button>
+            <button onclick="eliminarOrden()" class="btn-danger">
+                <i class="fas fa-trash"></i>
+                Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/ordenes.js') }}"></script>
+{% endblock %}

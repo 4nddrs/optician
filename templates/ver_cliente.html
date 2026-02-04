@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}{{ cliente.nombre_completo }} - Detalle Cliente{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-icon">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="header-text">
+            <h1>{{ cliente.nombre_completo }}</h1>
+            <p>Información del cliente</p>
+        </div>
+    </div>
+</div>
+
+<div class="cliente-detail-grid">
+    <div class="detail-card">
+        <div class="card-header">
+            <div class="card-icon">
+                <i class="fas fa-id-card"></i>
+            </div>
+            <h3>Información Personal</h3>
+        </div>
+        <div class="detail-content">
+            <div class="detail-row">
+                <span class="label">CI:</span>
+                <span class="value">{{ cliente.ci }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Nombre Completo:</span>
+                <span class="value">{{ cliente.nombre_completo }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Teléfono:</span>
+                <span class="value">{{ cliente.telefono }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Total de Órdenes:</span>
+                <span class="value">{{ cliente.historial_ordenes|length }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content-section">
+    <div class="section-header">
+        <h2><i class="fas fa-history"></i> Historial de Órdenes</h2>
+    </div>
+    
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID Orden</th>
+                    <th>Correlativo</th>
+                    <th>Sucursal</th>
+                    <th>Fecha Creación</th>
+                    <th>Fecha Entrega</th>
+                    <th>Estado</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for orden in ordenes %}
+                <tr>
+                    <td><strong>{{ orden.id_orden }}</strong></td>
+                    <td>{{ orden.nro_correlativo }}</td>
+                    <td>{{ orden.id_sucursal }}</td>
+                    <td>{{ orden.fecha_creacion[:10] }}</td>
+                    <td>{{ orden.fecha_entrega }}</td>
+                    <td>
+                        <span class="badge badge-{{ orden.estado }}">
+                            {{ orden.estado }}
+                        </span>
+                    </td>
+                    <td>Bs. {{ orden.pagos.total }}</td>
+                    <td>
+                        <a href="{{ url_for('ver_orden', orden_id=orden.id) }}" class="btn-icon" title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center">El cliente no tiene órdenes registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="form-actions">
+    <a href="{{ url_for('clientes') }}" class="btn-secondary">
+        <i class="fas fa-arrow-left"></i>
+        Volver a Clientes
+    </a>
+    <a href="{{ url_for('nueva_orden') }}" class="btn-primary">
+        <i class="fas fa-plus"></i>
+        Nueva Orden para este Cliente
+    </a>
+</div>
+{% endblock %}

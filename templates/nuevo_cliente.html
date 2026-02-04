@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Cliente - Óptica{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-icon">
+            <i class="fas fa-user-plus"></i>
+        </div>
+        <div class="header-text">
+            <h1>Nuevo Cliente</h1>
+            <p>Registrar un nuevo cliente</p>
+        </div>
+    </div>
+</div>
+
+<form id="formNuevoCliente" class="form-container">
+    <div class="form-card">
+        <div class="card-header">
+            <div class="card-icon">
+                <i class="fas fa-user"></i>
+            </div>
+            <h3>Información del Cliente</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="ci"><i class="fas fa-id-card"></i> Carnet de Identidad: *</label>
+                <input type="text" id="ci" name="ci" class="form-input" placeholder="Ej: 12345678" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="nombre_completo"><i class="fas fa-user"></i> Nombre Completo: *</label>
+                <input type="text" id="nombre_completo" name="nombre_completo" class="form-input" placeholder="Ej: Juan Pérez" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="telefono"><i class="fas fa-phone"></i> Teléfono: *</label>
+                <input type="tel" id="telefono" name="telefono" class="form-input" placeholder="Ej: 78512345" required>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <a href="{{ url_for('clientes') }}" class="btn-secondary">
+            <i class="fas fa-times"></i>
+            Cancelar
+        </a>
+        <button type="submit" class="btn-primary">
+            <i class="fas fa-save"></i>
+            Guardar Cliente
+        </button>
+    </div>
+</form>
+
+<div id="loading" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Guardando cliente...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('formNuevoCliente').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const loading = document.getElementById('loading');
+    loading.style.display = 'flex';
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch('{{ url_for("nuevo_cliente") }}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Cliente registrado exitosamente');
+            window.location.href = '{{ url_for("clientes") }}';
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error al guardar el cliente: ' + error.message);
+    } finally {
+        loading.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

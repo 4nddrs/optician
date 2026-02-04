@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Sucursales - Óptica{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-icon">
+            <i class="fas fa-building"></i>
+        </div>
+        <div class="header-text">
+            <h1>Sucursales</h1>
+            <p>Información de sucursales</p>
+        </div>
+    </div>
+</div>
+
+<div class="sucursales-grid">
+    {% for sucursal in sucursales %}
+    <div class="sucursal-card">
+        <div class="sucursal-header">
+            <div class="sucursal-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <div class="sucursal-info">
+                <h3>{{ sucursal.nombre }}</h3>
+                <span class="badge badge-primary">{{ sucursal.id }}</span>
+            </div>
+        </div>
+        <div class="sucursal-body">
+            <div class="info-row">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ sucursal.direccion }}</span>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-building"></i>
+        <p>No hay sucursales registradas</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Orden - Óptica{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-icon">
+            <i class="fas fa-plus-circle"></i>
+        </div>
+        <div class="header-text">
+            <h1>Nueva Orden de Trabajo</h1>
+            <p>Complete todos los campos requeridos</p>
+        </div>
+    </div>
+</div>
+
+<form id="formNuevaOrden" class="form-container">
+    <!-- Información del Cliente -->
+    <div class="form-card">
+        <div class="card-header">
+            <div class="card-icon">
+                <i class="fas fa-user"></i>
+            </div>
+            <h3>Información del Cliente</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group full-width">
+                <label for="buscarCliente"><i class="fas fa-search"></i> Buscar Cliente por CI:</label>
+                <div class="input-group">
+                    <input type="text" id="buscarCliente" class="form-input" placeholder="Ingrese CI del cliente">
+                    <button type="button" id="btnBuscarCliente" class="btn-secondary">
+                        <i class="fas fa-search"></i>
+                        Buscar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="nombre_cliente">Nombre: *</label>
+                <input type="text" id="nombre_cliente" class="form-input" readonly required>
+            </div>
+            
+            <div class="form-group">
+                <label for="telefono_cliente">Teléfono:</label>
+                <input type="text" id="telefono_cliente" class="form-input" readonly>
+            </div>
+            
+            <input type="hidden" id="id_cliente" name="id_cliente" required>
+            
+            <div class="form-group full-width">
+                <a href="{{ url_for('nuevo_cliente') }}" class="btn-secondary">
+                    <i class="fas fa-user-plus"></i>
+                    Nuevo Cliente
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información de la Orden -->
+    <div class="form-card">
+        <div class="card-header">
+            <div class="card-icon">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <h3>Información de la Orden</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="id_sucursal"><i class="fas fa-building"></i> Sucursal: *</label>
+                <select id="id_sucursal" name="id_sucursal" class="form-select" required>
+                    <option value="">Seleccione...</option>
+                    {% for sucursal in sucursales %}
+                    <option value="{{ sucursal.id }}">{{ sucursal.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="fecha_entrega"><i class="fas fa-calendar"></i> Fecha de Entrega: *</label>
+                <input type="date" id="fecha_entrega" name="fecha_entrega" class="form-input" required>
+            </div>
+        </div>
+    </div>
+
+    <!-- Especificaciones -->
+    <div class="form-card">
+        <div class="card-header">
+            <div class="card-icon">
+                <i class="fas fa-cogs"></i>
+            </div>
+            <h3>Especificaciones de los Lentes</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="tipo_lente">Tipo de Lente: *</label>
+                <select id="tipo_lente" name="tipo_lente" class="form-select" required>
+                    <option value="">Seleccione...</option>
+                    <option value="monofocal">Monofocal</option>
+                    <option value="bifocal">Bifocal</option>
+                    <option value="multifocal">Multifocal</option>
+                    <option value="progresivo">Progresivo</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="material">Material: *</label>
+                <select id="material" name="material" class="form-select" required>
+                    <option value="">Seleccione...</option>
+                    <option value="organico">Orgánico</option>
+                    <option value="policarbonato">Policarbonato</option>
+                    <option value="high_index">High Index</option>
+                    <option value="trivex">Trivex</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="marca_lente">Marca del Lente:</label>
+                <input type="text" id="marca_lente" name="marca_lente" class="form-input" placeholder="Ej: Varilux Physio">
+            </div>
+            
+            <div class="form-group full-width">
+                <label>Tratamientos:</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="tratamientos" value="antireflex">
+                        <span>Antireflex</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="tratamientos" value="blue_blocker">
+                        <span>Blue Blocker</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="tratamientos" value="transitions">
+                        <span>Transitions</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="tratamientos" value="polarizado">
+                        <span>Polarizado</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="tratamientos" value="antiraya">
+                        <span>Antiraya</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graduación Ojo Derecho -->
+    <div class="form-card">
+        <div class="card-header">
+            <div class="card-icon">
+                <i class="fas fa-eye"></i>
+            </div>
+            <h3>Graduación - Ojo Derecho (OD)</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="od_esf">Esfera (ESF): *</label>
+                <input type="number" id="od_esf" name="od_esf" class="form-input" step="0.25" placeholder="0.00" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="od_cil">Cilindro (CIL):</label>
+                <input type="number" id="od_cil" name="od_cil" class="form-input" step="0.25" placeholder="0.00">
+            </div>
+            
+            <div class="form-group">
+                <label for="od_eje">Eje:</label>
+                <input type="number" id="od_eje" name="od_eje" class="form-input" min="0" max="180" placeholder="0-180">
+            </div>
+        </div>
+    </div>
+
+    <!-- Graduación Ojo Izquierdo -->
+    <div class="form-card">
+        <div class="card-header">
+            <div class="card-icon">
+                <i class="fas fa-eye"></i>
+            </div>
+            <h3>Graduación - Ojo Izquierdo (OI)</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="oi_esf">Esfera (ESF): *</label>
+                <input type="number" id="oi_esf" name="oi_esf" class="form-input" step="0.25" placeholder="0.00" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="oi_cil">Cilindro (CIL):</label>
+                <input type="number" id="oi_cil" name="oi_cil" class="form-input" step="0.25" placeholder="0.00">
+            </div>
+            
+            <div class="form-group">
+                <label for="oi_eje">Eje:</label>
+                <input type="number" id="oi_eje" name="oi_eje" class="form-input" min="0" max="180" placeholder="0-180">
+            </div>
+        </div>
+    </div>
+
+    <!-- Otros Datos de Graduación -->
+    <div class="form-card">
+        <div class="card-header">
+            <div class="card-icon">
+                <i class="fas fa-ruler"></i>
+            </div>
+            <h3>Medidas Adicionales</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="di">Distancia Interpupilar (DI): *</label>
+                <input type="number" id="di" name="di" class="form-input" min="40" max="80" placeholder="62" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="adicion">Adición (Cerca):</label>
+                <input type="number" id="adicion" name="adicion" class="form-input" step="0.25" placeholder="0.00">
+            </div>
+        </div>
+    </div>
+
+    <!-- Montura -->
+    <div class="form-card">
+        <div class="card-header">
+            <div class="card-icon">
+                <i class="fas fa-glasses"></i>
+            </div>
+            <h3>Información de la Montura</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="modelo_montura">Modelo/Marca: *</label>
+                <input type="text" id="modelo_montura" name="modelo_montura" class="form-input" placeholder="Ej: Ray-Ban Aviator" required>
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="observaciones_montura">Observaciones:</label>
+                <textarea id="observaciones_montura" name="observaciones_montura" class="form-textarea" rows="3" placeholder="Ajustes o notas adicionales..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagos -->
+    <div class="form-card">
+        <div class="card-header">
+            <div class="card-icon">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <h3>Información de Pago</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="total">Total (Bs.): *</label>
+                <input type="number" id="total" name="total" class="form-input" step="0.01" placeholder="0.00" required onchange="calcularSaldo()">
+            </div>
+            
+            <div class="form-group">
+                <label for="adelanto">Adelanto (Bs.): *</label>
+                <input type="number" id="adelanto" name="adelanto" class="form-input" step="0.01" placeholder="0.00" required onchange="calcularSaldo()">
+            </div>
+            
+            <div class="form-group">
+                <label for="saldo">Saldo (Bs.):</label>
+                <input type="number" id="saldo" class="form-input" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="metodo_pago">Método de Pago: *</label>
+                <select id="metodo_pago" name="metodo_pago" class="form-select" required>
+                    <option value="">Seleccione...</option>
+                    <option value="efectivo">Efectivo</option>
+                    <option value="QR">QR</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="transferencia">Transferencia</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones -->
+    <div class="form-actions">
+        <a href="{{ url_for('ordenes') }}" class="btn-secondary">
+            <i class="fas fa-times"></i>
+            Cancelar
+        </a>
+        <button type="submit" class="btn-primary">
+            <i class="fas fa-save"></i>
+            Guardar Orden
+        </button>
+    </div>
+</form>
+
+<div id="loading" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Guardando orden...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{{ url_for('static', filename='js/nueva_orden.js') }}?v=5"></script>
+{% endblock %}

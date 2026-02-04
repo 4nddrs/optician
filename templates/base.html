@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Óptica{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="nav-brand">
+                <i class="fas fa-glasses"></i>
+                <span>Óptica</span>
+            </a>
+            <div class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('ordenes') }}" class="nav-link {% if request.endpoint in ['ordenes', 'nueva_orden', 'ver_orden'] %}active{% endif %}">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Órdenes</span>
+                </a>
+                <a href="{{ url_for('clientes') }}" class="nav-link {% if request.endpoint in ['clientes', 'nuevo_cliente', 'ver_cliente'] %}active{% endif %}">
+                    <i class="fas fa-users"></i>
+                    <span>Clientes</span>
+                </a>
+                <a href="{{ url_for('sucursales') }}" class="nav-link {% if request.endpoint == 'sucursales' %}active{% endif %}">
+                    <i class="fas fa-building"></i>
+                    <span>Sucursales</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <div id="modalBackdrop" class="modal-backdrop"></div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

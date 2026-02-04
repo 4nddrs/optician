@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Óptica{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-icon">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="header-text">
+            <h1>Dashboard</h1>
+            <p>Resumen general del sistema</p>
+        </div>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card" style="animation-delay: 0.1s;">
+        <div class="stat-icon">
+            <i class="fas fa-clipboard-list"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_ordenes }}</div>
+            <div class="stat-label">Total Órdenes</div>
+        </div>
+    </div>
+    
+    <div class="stat-card" style="animation-delay: 0.2s;">
+        <div class="stat-icon warning">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ ordenes_pendientes }}</div>
+            <div class="stat-label">Pendientes</div>
+        </div>
+    </div>
+    
+    <div class="stat-card" style="animation-delay: 0.3s;">
+        <div class="stat-icon success">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ ordenes_entregadas }}</div>
+            <div class="stat-label">Entregadas</div>
+        </div>
+    </div>
+    
+    <div class="stat-card" style="animation-delay: 0.4s;">
+        <div class="stat-icon">
+            <i class="fas fa-building"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">{{ sucursales|length }}</div>
+            <div class="stat-label">Sucursales</div>
+        </div>
+    </div>
+</div>
+
+<div class="content-section" style="animation-delay: 0.5s;">
+    <div class="section-header">
+        <h2><i class="fas fa-list"></i> Últimas Órdenes</h2>
+        <a href="{{ url_for('ordenes') }}" class="btn-secondary">
+            <i class="fas fa-eye"></i>
+            Ver Todas
+        </a>
+    </div>
+    
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID Orden</th>
+                    <th>Sucursal</th>
+                    <th>Cliente</th>
+                    <th>Fecha Creación</th>
+                    <th>Fecha Entrega</th>
+                    <th>Estado</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for orden in ordenes %}
+                <tr>
+                    <td><strong>{{ orden.id_orden }}</strong></td>
+                    <td>{{ orden.id_sucursal }}</td>
+                    <td>{{ clientes_dict.get(orden.id_cliente, {}).get('nombre_completo', orden.id_cliente) }}</td>
+                    <td>{{ orden.fecha_creacion[:10] }}</td>
+                    <td>{{ orden.fecha_entrega }}</td>
+                    <td>
+                        <span class="badge badge-{{ orden.estado }}">
+                            {{ orden.estado }}
+                        </span>
+                    </td>
+                    <td>Bs. {{ orden.pagos.total }}</td>
+                    <td>
+                        <a href="{{ url_for('ver_orden', orden_id=orden.id) }}" class="btn-icon view" title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center">No hay órdenes registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="quick-actions" style="animation-delay: 0.6s;">
+    <h2><i class="fas fa-bolt"></i> Acciones Rápidas</h2>
+    <div class="actions-grid">
+        <a href="{{ url_for('nueva_orden') }}" class="action-card">
+            <div class="action-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <div class="action-text">
+                <h3>Nueva Orden</h3>
+                <p>Crear orden de trabajo</p>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('nuevo_cliente') }}" class="action-card">
+            <div class="action-icon">
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <div class="action-text">
+                <h3>Nuevo Cliente</h3>
+                <p>Registrar cliente</p>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('clientes') }}" class="action-card">
+            <div class="action-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="action-text">
+                <h3>Buscar Cliente</h3>
+                <p>Buscar por CI o nombre</p>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('ordenes') }}" class="action-card">
+            <div class="action-icon">
+                <i class="fas fa-filter"></i>
+            </div>
+            <div class="action-text">
+                <h3>Filtrar Órdenes</h3>
+                <p>Por estado o sucursal</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Clientes - Óptica{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="header-text">
+            <h1>Clientes</h1>
+            <p>Gestión de clientes</p>
+        </div>
+    </div>
+    <a href="{{ url_for('nuevo_cliente') }}" class="btn-primary">
+        <i class="fas fa-user-plus"></i>
+        Nuevo Cliente
+    </a>
+</div>
+
+<div class="filters-section">
+    <div class="filter-group full-width">
+        <label for="searchCliente"><i class="fas fa-search"></i> Buscar:</label>
+        <input type="text" id="searchCliente" class="form-input" placeholder="Buscar por CI, nombre o teléfono...">
+    </div>
+</div>
+
+<div class="content-section">
+    <div class="clientes-grid" id="clientesGrid">
+        {% for cliente in clientes %}
+        <div class="cliente-card" data-ci="{{ cliente.ci }}" data-nombre="{{ cliente.nombre_completo|lower }}" data-telefono="{{ cliente.telefono }}">
+            <div class="cliente-header">
+                <div class="cliente-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="cliente-info">
+                    <h3>{{ cliente.nombre_completo }}</h3>
+                    <span class="badge badge-primary">CI: {{ cliente.ci }}</span>
+                </div>
+            </div>
+            <div class="cliente-body">
+                <div class="info-row">
+                    <i class="fas fa-phone"></i>
+                    <span>{{ cliente.telefono }}</span>
+                </div>
+                <div class="info-row">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>{{ cliente.historial_ordenes|length }} órdenes</span>
+                </div>
+            </div>
+            <div class="cliente-footer">
+                <a href="{{ url_for('ver_cliente', cliente_id=cliente.id) }}" class="btn-secondary">
+                    <i class="fas fa-eye"></i>
+                    Ver Detalles
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-users"></i>
+            <p>No hay clientes registrados</p>
+            <a href="{{ url_for('nuevo_cliente') }}" class="btn-primary">
+                <i class="fas fa-user-plus"></i>
+                Registrar Primer Cliente
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filtro de búsqueda
+document.getElementById('searchCliente').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const cards = document.querySelectorAll('.cliente-card');
+    
+    cards.forEach(card => {
+        const ci = card.dataset.ci.toLowerCase();
+        const nombre = card.dataset.nombre;
+        const telefono = card.dataset.telefono;
+        
+        if (ci.includes(searchTerm) || nombre.includes(searchTerm) || telefono.includes(searchTerm)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

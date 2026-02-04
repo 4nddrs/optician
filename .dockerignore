@@ -1,0 +1,59 @@
+# flyctl launch added from .gitignore
+# Archivos y directorios que no deben incluirse en el repositorio
+**\__pycache__
+**\*.py[cod]
+**\*$py.class
+**\*.so
+**\.Python
+**\build
+**\develop-eggs
+**\dist
+**\downloads
+**\eggs
+**\.eggs
+**\lib
+**\lib64
+**\parts
+**\sdist
+**\var
+**\wheels
+**\*.egg-info
+**\.installed.cfg
+**\*.egg
+
+# Entornos virtuales
+**\venv
+**\ENV
+**\env
+**\.venv
+
+# Firebase credentials (IMPORTANTE: Mantener seguro)
+**\key.json
+
+# Variables de entorno
+**\.env
+**\.env.local
+
+# IDEs
+**\.vscode
+**\.idea
+**\*.swp
+**\*.swo
+**\*~
+
+# Sistema operativo
+**\.DS_Store
+**\Thumbs.db
+
+# Logs
+**\*.log
+
+# Base de datos local (si se usa)
+**\*.db
+**\*.sqlite
+**\*.sqlite3
+
+# Archivos temporales
+**\*.tmp
+**\*.temp
+fly.toml
