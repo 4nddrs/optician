@@ -1,5 +1,8 @@
 # Optical Store Management System
 
+![Optical Store Management](images/image1.png)
+
+
 A modern web-based management system for optical stores, featuring client management, work order tracking, and branch administration. Built with Flask and Firebase Firestore, the application offers a sleek dark-mode interface with violet tones.
 
 ## Table of Contents
