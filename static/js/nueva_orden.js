@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const userProfile = typeof getCurrentUserProfile === 'function' ? getCurrentUserProfile() : null;
             if (userProfile) {
                 document.getElementById('id_empleado').value = userProfile.uid || '';
-                document.getElementById('nombre_empleado').value = userProfile.nombre_completo || '';
+                document.getElementById('nombre_empleado').value = userProfile.nombre || '';
             }
             
             // Mostrar loading

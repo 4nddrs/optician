@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Control - Óptica{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-icon">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="header-text">
+            <h1>Panel de Control</h1>
+            <p>Dashboard gerencial</p>
+        </div>
+    </div>
+    <button onclick="loadDashboardData()" class="btn-primary">
+        <i class="fas fa-sync-alt"></i>
+        Actualizar
+    </button>
+</div>
+
+<!-- Filtros -->
+<div class="filters-section">
+    <div class="filter-group">
+        <label for="filter-date"><i class="fas fa-calendar"></i> Período:</label>
+        <select id="filter-date" class="form-select">
+            <option value="hoy">Hoy</option>
+            <option value="semana">Esta Semana</option>
+            <option value="mes" selected>Mes Actual</option>
+            <option value="todo">Todo</option>
+        </select>
+    </div>
+    
+    <div class="filter-group">
+        <label for="filter-branch"><i class="fas fa-building"></i> Sucursal:</label>
+        <select id="filter-branch" class="form-select">
+            <option value="all">Todas las Sucursales</option>
+            <!-- Opciones se llenarán vía JS -->
+        </select>
+    </div>
+</div>
+
+<!-- Indicadores Clave (KPI Cards) -->
+<div class="content-section">
+    <div class="grid-kpi">
+        <!-- Ingresos -->
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.2); color: var(--color-success);">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Ingresos</p>
+                <h3 class="kpi-value" id="kpi-ingresos">Bs. 0.00</h3>
+            </div>
+        </div>
+        
+        <!-- Saldos por Cobrar -->
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: rgba(245, 158, 11, 0.2); color: var(--color-warning);">
+                <i class="fas fa-hand-holding-usd"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Saldos por Cobrar</p>
+                <h3 class="kpi-value" id="kpi-saldos">Bs. 0.00</h3>
+            </div>
+        </div>
+        
+        <!-- Órdenes en Taller -->
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: rgba(59, 130, 246, 0.2); color: var(--color-info);">
+                <i class="fas fa-tools"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Órdenes en Taller</p>
+                <h3 class="kpi-value" id="kpi-taller">0</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navegación de Tabs -->
+<div class="content-section">
+    <div class="tabs-container">
+        <button type="button" class="tab-btn active" data-tab="finanzas" onclick="switchDashboardTab('finanzas')">
+            <i class="fas fa-wallet"></i> Finanzas
+        </button>
+        <button type="button" class="tab-btn" data-tab="sucursales" onclick="switchDashboardTab('sucursales')">
+            <i class="fas fa-store"></i> Sucursales
+        </button>
+        <button type="button" class="tab-btn" data-tab="tendencias" onclick="switchDashboardTab('tendencias')">
+            <i class="fas fa-chart-pie"></i> Análisis
+        </button>
+    </div>
+</div>
+
+<!-- VISTA 1: Finanzas -->
+<div id="tab-finanzas" class="tab-content content-section active">
+    <div class="grid-charts">
+        <!-- Gráfico de Tendencia -->
+        <div class="chart-card">
+            <h4 class="chart-title">Ingresos en el Tiempo</h4>
+            <div class="chart-wrapper">
+                <canvas id="chart-tendencia-ingresos"></canvas>
+            </div>
+        </div>
+        
+        <!-- Distribución Pagos -->
+        <div class="chart-card">
+            <h4 class="chart-title">Métodos de Pago</h4>
+            <div class="chart-wrapper">
+                <canvas id="chart-metodos-pago"></canvas>
+            </div>
+        </div>
+        
+        <!-- Dinero Ingresado vs Saldo
+        <div class="chart-card">
+            <h4 class="chart-title">Dinero Ingresado vs Saldo Pendiente</h4>
+            <div class="chart-wrapper">
+                <canvas id="chart-cash-vs-pending"></canvas>
+            </div>
+        </div> -->
+        
+        <!-- Proporción Ingresos/Saldos -->
+        <div class="chart-card">
+            <h4 class="chart-title">Proporción: Pagado vs Por Cobrar</h4>
+            <div class="chart-wrapper">
+                <canvas id="chart-ingresos-saldos-ratio"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VISTA 2: Sucursales y Equipo -->
+<div id="tab-sucursales" class="tab-content content-section hidden">
+    <div class="grid-charts">
+        <!-- Ventas por Sucursal -->
+        <div class="chart-card">
+            <h4 class="chart-title">Ingresos por Sucursal</h4>
+            <div class="chart-wrapper">
+                <canvas id="chart-sucursales"></canvas>
+            </div>
+            <div class="summary-list" id="branch-summary"></div>
+        </div>
+        
+        <!-- Ranking Empleados -->
+        <div class="chart-card">
+            <h4 class="chart-title">Top Empleados por Ventas</h4>
+            <div class="employee-toolbar">
+                <input type="text" id="employee-search" class="employee-search" placeholder="Buscar empleado por nombre...">
+            </div>
+            <div class="employee-results" id="ranking-empleados-container">
+                <!-- Se llenará vía JS -->
+            </div>
+            <div class="employee-detail" id="employee-detail-panel">
+                <div class="employee-detail-header">
+                    <div>
+                        <div class="employee-detail-title" id="employee-detail-name">Selecciona un empleado</div>
+                        <span class="employee-meta" id="employee-detail-meta">Verás aquí el detalle de sus ventas</span>
+                    </div>
+                    <div class="employee-pill" id="employee-detail-summary">0 ventas</div>
+                </div>
+                <div class="employee-sales-list" id="employee-sales-list">
+                    <p class="ranking-empty">Busca o selecciona un empleado para ver sus ventas.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VISTA 3: Tendencias y Stock -->
+<div id="tab-tendencias" class="tab-content content-section hidden">
+    <div class="grid-charts">
+        <!-- Top Tratamientos -->
+        <div class="chart-card">
+            <h4 class="chart-title">Tratamientos más Solicitados</h4>
+            <div class="chart-wrapper">
+                <canvas id="chart-tratamientos"></canvas>
+            </div>
+        </div>
+        
+        <!-- Tipos de Lentes -->
+        <div class="chart-card">
+            <h4 class="chart-title">Tipos de Lentes Preferidos</h4>
+            <div class="chart-wrapper">
+                <canvas id="chart-lentes"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-card" style="margin-top: var(--spacing-lg);">
+        <h4 class="chart-title">Resumen por Estado</h4>
+        <div class="summary-list" id="trend-summary"></div>
+    </div>
+</div>
+
+<!-- Fallback: Acceso Denegado -->
+<div id="access-denied" class="content-section text-center" style="display: none;">
+    <div style="padding: 3rem;">
+        <i class="fas fa-lock" style="font-size: 4rem; color: var(--color-error); margin-bottom: 1rem;"></i>
+        <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">Acceso Denegado</h2>
+        <p style="color: var(--text-secondary);">No tienes los permisos necesarios para ver este panel.</p>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Control Dashboard Script -->
+<script src="{{ url_for('static', filename='js/control.js') }}"></script>
+
+<style>
+    /* Grid de KPIs */
+    .grid-kpi {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-xl);
+    }
+
+    .kpi-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: var(--spacing-md);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--color-primary-light);
+    }
+
+    .kpi-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: var(--border-radius-small);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .kpi-content {
+        flex: 1;
+    }
+
+    .kpi-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .kpi-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    /* Tabs */
+    .tabs-container {
+        display: flex;
+        gap: var(--spacing-sm);
+        padding-bottom: var(--spacing-md);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .tab-btn {
+        padding: var(--spacing-sm) var(--spacing-md);
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-weight: 500;
+        transition: var(--transition);
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-bottom: 2px solid transparent;
+    }
+
+    .tab-btn:hover {
+        color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+        color: var(--color-primary-light);
+        border-bottom-color: var(--color-primary-light);
+    }
+
+    /* Charts Grid */
+    .grid-charts {
+        display: grid;
+        /* allow smaller columns for mobile while keeping good spacing on desktop */
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--spacing-lg);
+    }
+
+    /* Chart Card */
+    .chart-card {
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: var(--spacing-md);
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .chart-card:hover {
+        border-color: var(--color-primary-light);
+        box-shadow: var(--shadow-glow-sm);
+    }
+
+    .chart-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-md);
+    }
+
+    .chart-wrapper {
+        position: relative;
+        /* use aspect-ratio for responsive sizing instead of fixed height */
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        max-height: 420px;
+    }
+
+    /* Ensure canvas fills wrapper and is responsive */
+    .chart-wrapper canvas {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+    }
+
+    .ranking-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .ranking-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm);
+        background: var(--bg-primary);
+        border-radius: var(--border-radius-small);
+        border-left: 3px solid var(--color-primary);
+    }
+
+    .ranking-position {
+        font-weight: 700;
+        color: var(--color-primary-light);
+        min-width: 30px;
+        text-align: center;
+    }
+
+    .ranking-content {
+        flex: 1;
+    }
+
+    .ranking-name {
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .ranking-value {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .ranking-badge {
+        background: var(--gradient-primary);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--border-radius-badge);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .ranking-track {
+        flex: 0 0 120px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.18);
+        overflow: hidden;
+        margin-left: auto;
+    }
+
+    .ranking-bar {
+        height: 100%;
+        border-radius: inherit;
+        background: var(--gradient-primary);
+    }
+
+    .ranking-empty {
+        color: var(--text-secondary);
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+
+    .employee-toolbar {
+        display: flex;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-md);
+        flex-wrap: wrap;
+    }
+
+    .employee-search {
+        flex: 1;
+        min-width: 220px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-small);
+        color: var(--text-primary);
+        padding: 0.85rem 1rem;
+        outline: none;
+    }
+
+    .employee-search:focus {
+        border-color: var(--color-primary-light);
+        box-shadow: var(--shadow-glow-sm);
+    }
+
+    .employee-results {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        max-height: 320px;
+        overflow-y: auto;
+    }
+
+    .employee-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-small);
+        padding: 0.9rem 1rem;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .employee-card:hover,
+    .employee-card.active {
+        border-color: var(--color-primary-light);
+        box-shadow: var(--shadow-glow-sm);
+        transform: translateY(-1px);
+    }
+
+    .employee-card-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .employee-name {
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .employee-meta {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+
+    .employee-stats {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+    }
+
+    .employee-pill {
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: rgba(139, 92, 246, 0.12);
+        color: var(--text-primary);
+        font-size: 0.82rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .employee-detail {
+        margin-top: var(--spacing-md);
+        padding-top: var(--spacing-md);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .employee-detail-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .employee-detail-title {
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .employee-sales-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        max-height: 260px;
+        overflow-y: auto;
+    }
+
+    .employee-sale-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.75rem;
+        padding: 0.8rem 0.9rem;
+        border-radius: var(--border-radius-small);
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid var(--border-color);
+    }
+
+    .employee-sale-row strong {
+        color: var(--text-primary);
+    }
+
+    .employee-sale-row span {
+        color: var(--text-secondary);
+        font-size: 0.88rem;
+    }
+
+    .summary-list {
+        display: grid;
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-md);
+    }
+
+    .summary-card {
+        padding: 0.85rem 1rem;
+        border-radius: var(--border-radius-small);
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .summary-card strong {
+        color: var(--text-primary);
+    }
+
+    .summary-card span {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    /* Tab Content */
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    /* Responsive adjustments for multiple breakpoints */
+    @media (max-width: 992px) {
+        .grid-charts {
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .grid-kpi {
+            grid-template-columns: 1fr;
+        }
+
+        .grid-charts {
+            grid-template-columns: 1fr;
+            gap: var(--spacing-md);
+            grid-auto-rows: minmax(180px, auto);
+        }
+
+        .chart-wrapper {
+            aspect-ratio: 4 / 3;
+            max-height: 320px;
+        }
+
+        .chart-card {
+            padding: calc(var(--spacing-xs));
+            overflow: hidden;
+        }
+
+        .chart-title {
+            font-size: 0.95rem;
+        }
+
+        .tabs-container {
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            font-size: 0.875rem;
+            padding: var(--spacing-xs) var(--spacing-sm);
+        }
+    }
+
+    @media (max-width: 420px) {
+        .chart-wrapper {
+            aspect-ratio: 1 / 1;
+            max-height: 260px;
+        }
+
+        .kpi-value {
+            font-size: 1.4rem;
+        }
+    }
+
+    @media (max-width: 360px) {
+        .chart-wrapper {
+            aspect-ratio: 1 / 1;
+            max-height: 220px;
+        }
+
+        .chart-title {
+            font-size: 0.9rem;
+        }
+    }
+</style>
+
+{% endblock %}

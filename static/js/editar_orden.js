@@ -154,6 +154,19 @@ function calcularSaldo() {
 // Make function globally accessible
 window.calcularSaldo = calcularSaldo;
 
+document.addEventListener('DOMContentLoaded', function() {
+    const totalInput = document.getElementById('total');
+    const adelantoInput = document.getElementById('adelanto');
+    
+    if (totalInput) {
+        totalInput.addEventListener('input', calcularSaldo);
+    }
+    
+    if (adelantoInput) {
+        adelantoInput.addEventListener('input', calcularSaldo);
+    }
+});
+
 // Set minimum delivery date (today)
 document.addEventListener('DOMContentLoaded', function() {
     const fechaEntrega = document.getElementById('fecha_entrega');
@@ -197,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const userProfile = typeof getCurrentUserProfile === 'function' ? getCurrentUserProfile() : null;
             if (userProfile) {
                 document.getElementById('id_empleado').value = userProfile.uid || '';
-                document.getElementById('nombre_empleado').value = userProfile.nombre_completo || '';
+                document.getElementById('nombre_empleado').value = userProfile.nombre || '';
             }
             
             // Mostrar loading

@@ -4,7 +4,6 @@
 
 {% block content %}
 <div class="container mx-auto p-4 lg:p-8">
-    <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
         <div class="flex items-center mb-4 lg:mb-0">
             <div class="bg-primary-light text-white rounded-lg p-4 mr-4">
@@ -30,18 +29,14 @@
         </div>
     </div>
 
-    <!-- Main Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        <!-- Main Content (Cols 1 & 2) -->
         <div class="lg:col-span-2 flex flex-col gap-8">
             
-            <!-- Graduacion Card -->
             <div class="detail-card p-6 lg:p-8">
                 <h3 class="text-xl font-bold text-white mb-6">Graduación</h3>
                 <div class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
-                        <!-- Ojo Derecho -->
                         <div class="grad-section">
                             <h4 class="font-semibold text-gray-300 mb-3 text-center md:text-left">Ojo Derecho (O.D.)</h4>
                             <div class="grid grid-cols-3 gap-2 text-center">
@@ -59,7 +54,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Ojo Izquierdo -->
                         <div class="grad-section">
                             <h4 class="font-semibold text-gray-300 mb-3 text-center md:text-left">Ojo Izquierdo (O.I.)</h4>
                             <div class="grid grid-cols-3 gap-2 text-center">
@@ -93,7 +87,6 @@
                 </div>
             </div>
 
-            <!-- Especificaciones y Montura Card -->
             <div class="detail-card p-6 lg:p-8">
                 <h3 class="text-xl font-bold text-white mb-6">Especificaciones y Montura</h3>
                 <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
@@ -132,65 +125,33 @@
                 </dl>
             </div>
 
-            <!-- Contenedor para Pago e Historial -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                <!-- Informacion de Pago Card -->
-                <div class="detail-card p-6 lg:p-8 h-full">
-                    <div class="flex items-center mb-6">
-                        <div class="bg-gray-700 rounded-lg p-3 mr-4">
-                            <i class="fas fa-dollar-sign text-xl text-green-400"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white">Información de Pago</h3>
+            <div class="detail-card p-6 lg:p-8">
+                <div class="flex items-center mb-6">
+                    <div class="bg-gray-700 rounded-lg p-3 mr-4">
+                        <i class="fas fa-dollar-sign text-xl text-green-400"></i>
                     </div>
-                    <ul class="space-y-4">
-                        <li class="flex justify-between items-center text-lg">
-                            <span class="text-gray-300">Total:</span>
-                            <span class="font-bold text-white">Bs. {{ "%.2f"|format(orden.pagos.total) }}</span>
-                        </li>
-                        <li class="flex justify-between items-center text-base">
-                            <span class="text-gray-400">A Cuenta:</span>
-                            <span class="font-medium text-gray-300">Bs. {{ "%.2f"|format(orden.pagos.adelanto) }}</span>
-                        </li>
-                        <li class="flex justify-between items-center text-xl p-3 rounded-lg bg-yellow-500 bg-opacity-10">
-                            <span class="font-semibold text-yellow-400">Saldo:</span>
-                            <span class="font-bold text-yellow-300">Bs. {{ "%.2f"|format(orden.pagos.saldo) }}</span>
-                        </li>
-                    </ul>
-                    <div class="border-t border-gray-700 mt-6 pt-4">
-                        <p class="text-sm text-gray-400">Método de Pago del Adelanto: <span class="font-medium text-gray-300">{{ orden.pagos.metodo_pago }}</span></p>
-                    </div>
+                    <h3 class="text-xl font-bold text-white">Información de Pago</h3>
                 </div>
-
-                <!-- Historial de Cambios -->
-                {% if orden.historial %}
-                <div class="detail-card p-6 lg:p-8 h-full flex flex-col">
-                    <h3 class="text-xl font-bold text-white mb-6"><i class="fas fa-history mr-2"></i> Historial de Cambios</h3>
-                    <div class="relative border-l border-gray-700 ml-4 py-2 space-y-8 flex-grow overflow-y-auto" style="max-height: 300px;">
-                        {% for log in orden.historial|reverse %}
-                        <div class="mb-8 pl-8 relative">
-                            <span class="absolute -left-[17px] top-1 rounded-full bg-gray-800 border-4 border-gray-700 text-blue-400 w-8 h-8 flex items-center justify-center">
-                                <i class="fas fa-user-edit text-xs"></i>
-                            </span>
-                            <div class="bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-700">
-                                <div class="flex flex-col md:flex-row md:items-center justify-between mb-2">
-                                    <h4 class="text-md font-bold text-white">{{ log.nombre_usuario }}</h4>
-                                    <time class="text-xs text-gray-400 mt-1 md:mt-0 font-mono">{{ log.fecha[:10] }} {{ log.fecha[11:16] }}</time>
-                                </div>
-                                <ul class="list-disc pl-5 text-sm text-gray-300 space-y-1">
-                                    {% for cambio in log.cambios %}
-                                    <li>{{ cambio }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
+                <ul class="space-y-4">
+                    <li class="flex justify-between items-center text-lg">
+                        <span class="text-gray-300">Total:</span>
+                        <span class="font-bold text-white">Bs. {{ "%.2f"|format(orden.pagos.total) }}</span>
+                    </li>
+                    <li class="flex justify-between items-center text-base">
+                        <span class="text-gray-400">A Cuenta:</span>
+                        <span class="font-medium text-gray-300">Bs. {{ "%.2f"|format(orden.pagos.adelanto) }}</span>
+                    </li>
+                    <li class="flex justify-between items-center text-xl p-3 rounded-lg bg-yellow-500 bg-opacity-10">
+                        <span class="font-semibold text-yellow-400">Saldo:</span>
+                        <span class="font-bold text-yellow-300">Bs. {{ "%.2f"|format(orden.pagos.saldo) }}</span>
+                    </li>
+                </ul>
+                <div class="border-t border-gray-700 mt-6 pt-4">
+                    <p class="text-sm text-gray-400">Método de Pago del Adelanto: <span class="font-medium text-gray-300">{{ orden.pagos.metodo_pago }}</span></p>
                 </div>
-                {% endif %}
             </div>
         </div>
 
-        <!-- Sidebar (Col 3) -->
         <div class="lg:col-span-1 flex flex-col gap-8">
             <div class="detail-card p-6 lg:p-8">
                 <h3 class="text-xl font-bold text-white mb-6">Cliente y Orden</h3>
@@ -225,10 +186,37 @@
                     </div>
                 </dl>
             </div>
+
+            {% if orden.historial %}
+            <div class="detail-card p-6 lg:p-8 flex flex-col bg-gray-900 rounded-xl border border-gray-800 shadow-xl h-[450px] max-h-[450px] overflow-hidden">
+                <h3 class="text-xl font-bold text-white mb-6 flex items-center shrink-0">
+                     Historial de Cambios
+                </h3>
+                
+                <div class="border-l border-gray-700 ml-4 pr-2 overflow-y-auto space-y-4 max-h-[320px] block w-full">
+                    {% for log in orden.historial|reverse %}
+                    <div class="pl-6 relative group">
+                        <div class="bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-700">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between mb-2 gap-1">
+                                <h4 class="text-sm font-bold text-white">{{ log.nombre_usuario }}</h4>
+                                <time class="text-xs text-gray-400 font-mono bg-gray-900 px-1.5 py-0.5 rounded">
+                                    {{ log.fecha[:10] }} {{ log.fecha[11:16] }}
+                                </time>
+                            </div>
+                            <ul class="list-disc pl-5 text-sm text-gray-300 space-y-1">
+                                {% for cambio in log.cambios %}
+                                <li class="break-words">{{ cambio }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Footer Action -->
     <div class="mt-8 text-center lg:text-left">
         <a href="{{ url_for('ordenes') }}" class="btn-secondary">
             <i class="fas fa-arrow-left"></i>

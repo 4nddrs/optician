@@ -294,6 +294,38 @@ def index():
     except Exception as e:
         return render_template('error.html', error=str(e))
 
+# Control / Panel de Administración
+@app.route('/control')
+@login_required
+def control():
+    """Vista del dashboard gerencial / control"""
+    return render_template('control.html')
+
+@app.route('/api/control/datos', methods=['GET'])
+@login_required
+def api_control_datos():
+    try:
+        ordenes = fb.get_all_orders()
+        sucursales = fb.get_all_branches()
+        usuarios = fa.obtener_usuarios_activos()
+        
+        # Convertir timestamps si los hay
+        usuarios_safe = []
+        for u in usuarios:
+            us = dict(u)
+            if hasattr(us.get('fecha_creacion'), 'timestamp'):
+                us['fecha_creacion'] = us['fecha_creacion'].isoformat()
+            usuarios_safe.append(us)
+
+        return jsonify({
+            'success': True,
+            'ordenes': ordenes,
+            'sucursales': sucursales,
+            'usuarios': usuarios_safe
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Client routes
 @app.route('/clientes')
 def clientes():
@@ -372,10 +404,10 @@ def nueva_orden():
                 'id_sucursal': request.form.get('id_sucursal'),
                 'id_cliente': request.form.get('id_cliente'),
                 'id_empleado': request.form.get('id_empleado', ''),
-                'nombre_empleado': request.form.get('nombre_empleado', 'Desconocido'),
+                'nombre_usuario': request.form.get('nombre_empleado', 'Desconocido'),
                 'fecha_creacion': datetime.utcnow().isoformat() + 'Z',
                 'fecha_entrega': request.form.get('fecha_entrega'),
-                'estado': 'pendiente',
+                'estado': 'Pendiente',
                 
                 # Specifications
                 'especificaciones': {
@@ -461,7 +493,7 @@ def ver_orden(orden_id):
                 orden['nombre_empleado'] = 'Empleado no encontrado'
         else:
             # Fallback por si el empleado fue eliminado o es una orden antigua
-            orden['nombre_empleado'] = orden.get('nombre', 'N/A')
+            orden['nombre_empleado'] = orden.get('nombre_empleado', 'N/A')
 
         return render_template('ver_orden.html', orden=orden, cliente=cliente, sucursal=sucursal)
     except Exception as e:
@@ -530,7 +562,7 @@ def editar_orden(orden_id):
                 'pagos': {
                     'total': float(data.get('total') or 0),
                     'adelanto': float(data.get('adelanto') or 0),
-                    'saldo': float(data.get('saldo') or 0),
+                    'saldo': float(data.get('total') or 0) - float(data.get('adelanto') or 0),
                     'metodo_pago': data.get('metodo_pago')
                 },
                 'ultima_actualizacion': datetime.now().isoformat()

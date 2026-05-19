@@ -555,22 +555,22 @@ body {
     box-shadow: var(--shadow-glow-sm);
 }
 
-.badge-success, .badge-entregado {
+.badge-success, .badge-Entregado {
     background: linear-gradient(135deg, #059669 0%, #10b981 100%);
     color: white;
 }
 
-.badge-warning, .badge-pendiente {
+.badge-warning, .badge-Pendiente {
     background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
     color: white;
 }
 
-.badge-info, .badge-en_proceso {
+.badge-info, .badge-Progreso {
     background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
     color: white;
 }
 
-.badge-listo {
+.badge-Listo {
     background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
     color: white;
 }

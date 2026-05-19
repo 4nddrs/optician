@@ -119,10 +119,10 @@ function enviarWhatsApp(telefono, nombreCliente, estado, fechaEntrega, ordenId) 
     
     // Translate status to Spanish friendly text
     const estadosTexto = {
-        'pendiente': 'PENDIENTE de procesamiento',
-        'en_proceso': 'EN PROCESO',
-        'listo': 'LISTO para entrega',
-        'entregado': 'ENTREGADO'
+        'Pendiente': 'PENDIENTE de procesamiento',
+        'Progreso': 'EN PROCESO',
+        'Listo': 'LISTO para entrega',
+        'Entregado': 'ENTREGADO'
     };
     
     const estadoTexto = estadosTexto[estado] || estado.toUpperCase();

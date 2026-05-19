@@ -360,6 +360,10 @@
                         <i class="fas fa-building"></i>
                         <span>Sucursales</span>
                     </a>
+                    <a href="{{ url_for('control') }}" class="nav-link {% if request.endpoint == 'control' %}active{% endif %}" id="controlLink" style="display: none;">
+                        <i class="fas fa-chart-line text-blue-500"></i>
+                        <span>Control</span>
+                    </a>
                     <a href="{{ url_for('usuarios') }}" class="nav-link {% if request.endpoint == 'usuarios' %}active{% endif %}" id="usuariosLink" style="display: none;">
                         <i class="fas fa-users"></i>
                         <span>Usuarios</span>
@@ -447,6 +451,10 @@
                 <i class="fas fa-building"></i>
                 <span>Sucursales</span>
             </a>
+            <a href="{{ url_for('control') }}" class="nav-link {% if request.endpoint == 'control' %}active{% endif %}" id="sidebarControlLink" style="display: none;">
+                <i class="fas fa-chart-line text-blue-500"></i>
+                <span>Control</span>
+            </a>
             <a href="{{ url_for('usuarios') }}" class="nav-link {% if request.endpoint == 'usuarios' %}active{% endif %}" id="sidebarUsuariosLink" style="display: none;">
                 <i class="fas fa-users"></i>
                 <span>Usuarios</span>
@@ -489,6 +497,9 @@
     
     <!-- Navbar User Menu Handler -->
     <script>
+        // Variable global para datos del usuario
+        let userData = null;
+
         // Esperar a que Firebase esté listo
         function setupUserMenu() {
             // Comprobar si Firebase está listo
@@ -575,19 +586,23 @@
                 // Mostrar opciones de admin
                 if (userData.rol === 'admin') {
                     // Desktop
+                    const controlLink = document.getElementById('controlLink');
                     const usuariosLink = document.getElementById('usuariosLink');
                     const createUserItem = document.getElementById('createUserItem');
                     const manageUsersItem = document.getElementById('manageUsersItem');
 
+                    if (controlLink) controlLink.style.display = 'flex';
                     if (usuariosLink) usuariosLink.style.display = 'flex';
                     if (createUserItem) createUserItem.style.display = 'flex';
                     if (manageUsersItem) manageUsersItem.style.display = 'flex';
 
                     // Mobile
+                    const sidebarControlLink = document.getElementById('sidebarControlLink');
                     const sidebarUsuariosLink = document.getElementById('sidebarUsuariosLink');
                     const sidebarCreateUserItem = document.getElementById('sidebarCreateUserItem');
                     const sidebarManageUsersItem = document.getElementById('sidebarManageUsersItem');
 
+                    if (sidebarControlLink) sidebarControlLink.style.display = 'block';
                     if (sidebarUsuariosLink) sidebarUsuariosLink.style.display = 'block';
                     if (sidebarCreateUserItem) sidebarCreateUserItem.style.display = 'block';
                     if (sidebarManageUsersItem) sidebarManageUsersItem.style.display = 'block';
@@ -639,7 +654,7 @@
 
                         const json = await resp.json();
                         if (json.success && json.usuario) {
-                            const userData = json.usuario;
+                            userData = json.usuario;
                             localStorage.setItem('optica_user_data', JSON.stringify(userData));
                             renderUserData(userData);
                         }
