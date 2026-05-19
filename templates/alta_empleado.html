@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block title %}Alta de Empleado - Óptica{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-icon">
+            <i class="fas fa-user-plus"></i>
+        </div>
+        <div class="header-text">
+            <h1>Crear Nuevo Empleado</h1>
+            <p>Registra un nuevo miembro del equipo</p>
+        </div>
+    </div>
+</div>
+
+<div class="container" style="max-width: 600px;">
+    <div class="form-card">
+        <form id="altaEmpleadoForm" class="form-group-wrapper">
+            <!-- Error Messages -->
+            <div class="form-error" id="errorMessage" style="display: none;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorText"></span>
+            </div>
+
+            <!-- Success Message -->
+            <div class="form-success" id="successMessage" style="display: none;">
+                <i class="fas fa-check-circle"></i>
+                <span id="successText"></span>
+            </div>
+
+            <!-- Nombre -->
+            <div class="form-group">
+                <label class="form-label" for="nombre">
+                    <i class="fas fa-user"></i> Nombre Completo
+                </label>
+                <input 
+                    type="text" 
+                    id="nombre" 
+                    name="nombre" 
+                    class="form-input" 
+                    placeholder="Juan Pérez"
+                    required
+                >
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+                <label class="form-label" for="email">
+                    <i class="fas fa-envelope"></i> Email
+                </label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    class="form-input" 
+                    placeholder="juan@optica.com"
+                    required
+                >
+            </div>
+
+            <!-- Sucursal -->
+            <div class="form-group">
+                <label class="form-label" for="sucursal">
+                    <i class="fas fa-building"></i> Sucursal
+                </label>
+                <select id="sucursal" name="sucursal" class="form-input" required>
+                    <option value="">Seleccionar sucursal...</option>
+                    <option value="1">Sucursal 1</option>
+                    <option value="2">Sucursal 2</option>
+                    <option value="3">Sucursal 3</option>
+                    <option value="4">Sucursal 4</option>
+                </select>
+            </div>
+
+            <!-- Rol -->
+            <div class="form-group">
+                <label class="form-label" for="rol">
+                    <i class="fas fa-shield-alt"></i> Rol
+                </label>
+                <select id="rol" name="rol" class="form-input" required>
+                    <option value="">Seleccionar rol...</option>
+                    <option value="empleado">Empleado</option>
+                    <option value="admin">Administrador</option>
+                </select>
+            </div>
+
+            <!-- Contraseña Temporal -->
+            <div class="form-group">
+                <label class="form-label" for="password">
+                    <i class="fas fa-key"></i> Contraseña Temporal
+                </label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-input" 
+                        placeholder="••••••••"
+                        minlength="6"
+                        readonly
+                        style="flex: 1;"
+                    >
+                    <button type="button" class="btn-icon" id="generatePassword" title="Generar contraseña aleatoria">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>                    <button type="button" class="btn-icon" id="copyPassword" title="Copiar contraseña generada" style="background:#4ade80; color:white;">
+                        <i class="fas fa-copy"></i>
+                    </button>                </div>
+                <small style="color: var(--text-secondary); margin-top: 0.25rem; display: block;">
+                    Mínimo 6 caracteres. El empleado la cambiará en su primer login.
+                </small>
+            </div>
+
+            <!-- Info Box -->
+            <div class="info-box">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Importante:</strong>
+                    <p>El empleado deberá cambiar su contraseña en el primer acceso. Se mostrará un modal obligatorio para establecer su contraseña personal.</p>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="form-buttons">
+                <button type="button" class="btn-secondary" id="cancelBtn">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    <i class="fas fa-save"></i> <span>Crear Empleado</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.container {
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+.form-card {
+    background: var(--surface-primary);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.form-group-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.form-input,
+select {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.form-input:focus,
+select:focus {
+    outline: none;
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    background: var(--surface-secondary);
+}
+
+select {
+    cursor: pointer;
+}
+
+select option {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.btn-icon {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 1rem;
+}
+
+.btn-icon:hover {
+    border-color: var(--color-primary-light);
+    background: var(--bg-primary);
+}
+
+.info-box {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: var(--border-radius-small);
+    padding: var(--spacing-md);
+    display: flex;
+    gap: var(--spacing-md);
+    color: #93c5fd;
+}
+
+.info-box i {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+}
+
+.info-box p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.form-error,
+.form-success {
+    padding: 0.75rem;
+    border-radius: var(--border-radius-small);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    animation: slideIn 0.3s ease;
+}
+
+.form-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.form-success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #86efac;
+}
+
+.form-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+    justify-content: flex-end;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius-small);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    border-color: var(--color-primary-light);
+    background: var(--bg-primary);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: var(--spacing-md);
+    }
+
+    .form-card {
+        padding: var(--spacing-md);
+    }
+
+    .form-buttons {
+        flex-direction: column;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+// Generar contraseña aleatoria
+document.getElementById('generatePassword').addEventListener('click', function() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('password').value = password;
+});
+
+// Copiar contraseña generada
+document.getElementById('copyPassword').addEventListener('click', function() {
+    const passInput = document.getElementById('password');
+    navigator.clipboard.writeText(passInput.value)
+        .then(() => {
+            const originalIcon = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                this.innerHTML = originalIcon;
+            }, 2000);
+        })
+        .catch(err => {
+            console.error('Error al copiar: ', err);
+            alert('No se pudo copiar la contraseña.');
+        });
+});
+
+// Generar contraseña al cargar la página
+window.addEventListener('load', function() {
+    document.getElementById('generatePassword').click();
+});
+
+// Manejar envío del formulario
+document.getElementById('altaEmpleadoForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const errorDiv = document.getElementById('errorMessage');
+    const successDiv = document.getElementById('successMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Limpiar mensajes previos
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Creando...</span>';
+        
+        const formData = new FormData(this);
+        const response = await fetch('/api/empleados/crear', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            successDiv.style.display = 'flex';
+            document.getElementById('successText').textContent = 'Empleado creado exitosamente. Redirigiendo...';
+            
+            setTimeout(() => {
+                window.location.href = '/usuarios';
+            }, 2000);
+        } else {
+            errorDiv.style.display = 'flex';
+            document.getElementById('errorText').textContent = data.error || 'Error al crear empleado';
+        }
+    } catch (error) {
+        errorDiv.style.display = 'flex';
+        document.getElementById('errorText').textContent = 'Error de conexión. Intenta de nuevo.';
+        console.error('Error:', error);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> <span>Crear Empleado</span>';
+    }
+});
+
+// Botón cancelar
+document.getElementById('cancelBtn').addEventListener('click', function() {
+    window.history.back();
+});
+</script>
+{% endblock %}

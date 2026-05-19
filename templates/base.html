@@ -17,40 +17,457 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     
-    <!-- Theme Color -->
+    <!-- Theme Color para la barra de navegación en móviles -->
+    <meta name="theme-color" content="#0a0e1a" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#0a0e1a" />
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .nav-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-small);
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .user-button:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: var(--color-primary-light);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--surface-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-small);
+            box-shadow: var(--shadow-lg);
+            min-width: 250px;
+            margin-top: 0.5rem;
+            display: none;
+            z-index: 1000;
+            animation: slideIn 0.2s ease;
+        }
+
+        .user-dropdown.show {
+            display: block;
+        }
+
+        .dropdown-header {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dropdown-user-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .dropdown-user-role {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .dropdown-menu {
+            padding: var(--spacing-sm);
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: var(--border-radius-small);
+            transition: var(--transition);
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .dropdown-item.danger {
+            color: #fca5a5;
+        }
+
+        .dropdown-item.danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: var(--spacing-sm) 0;
+        }
+
+        .admin-badge {
+            display: inline-block;
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--border-radius-badge);
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        /* Botón hamburguesa móvil */
+        .mobile-menu-btn {
+            display: none;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: var(--border-radius-small);
+            transition: var(--transition);
+        }
+        
+        .mobile-menu-btn:hover {
+            color: var(--color-primary-light);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        @media (max-width: 1024px) {
+            .nav-menu {
+                display: none !important;
+            }
+            .user-menu {
+                display: none !important;
+            }
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+
+        /* Overlay y Sidebar móvil */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 1040;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-backdrop.show {
+            display: block;
+            opacity: 1;
+        }
+
+        .mobile-sidebar {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            width: 80%;
+            max-width: 320px;
+            height: 100vh;
+            background: var(--surface-primary);
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+            z-index: 1050;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .mobile-sidebar.open {
+            right: 0;
+        }
+
+        .sidebar-header-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: var(--border-radius-small);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-close-btn:hover {
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .sidebar-user {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: rgba(139, 92, 246, 0.03);
+        }
+
+        .sidebar-user .user-avatar {
+            width: 48px;
+            height: 48px;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-user-info-text {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-user-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-user-role {
+            font-size: 0.85rem;
+            color: var(--color-primary-light);
+            margin-top: 2px;
+        }
+
+        .sidebar-nav {
+            padding: var(--spacing-md) 0;
+            flex-grow: 1;
+        }
+
+        .sidebar-nav .nav-link {
+            padding: 1.25rem var(--spacing-lg);
+            border-radius: 0;
+            margin: 0;
+            border-left: 4px solid transparent;
+            font-size: 1.05rem;
+        }
+
+        .sidebar-nav .nav-link span {
+            display: inline !important; /* Sobrescribe cualquier regla que lo oculte en móviles */
+        }
+
+        .sidebar-nav .nav-link:hover {
+            background: rgba(139, 92, 246, 0.05);
+            transform: none;
+        }
+
+        .sidebar-nav .nav-link.active {
+            background: rgba(139, 92, 246, 0.1);
+            border-left-color: var(--color-primary);
+            color: var(--color-primary-light);
+            box-shadow: none;
+        }
+
+        .sidebar-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            background: var(--bg-primary);
+        }
+
+        .sidebar-footer .dropdown-item {
+            padding: 1rem;
+            font-size: 1rem;
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
+            <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
+                <a href="{{ url_for('index') }}" class="nav-brand">
+                    <i class="fas fa-glasses"></i>
+                    <span>Óptica</span>
+                </a>
+                <div class="nav-menu">
+                    <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('ordenes') }}" class="nav-link {% if request.endpoint in ['ordenes', 'nueva_orden', 'ver_orden'] %}active{% endif %}">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Órdenes</span>
+                    </a>
+                    <a href="{{ url_for('clientes') }}" class="nav-link {% if request.endpoint in ['clientes', 'nuevo_cliente', 'ver_cliente'] %}active{% endif %}">
+                        <i class="fas fa-users"></i>
+                        <span>Clientes</span>
+                    </a>
+                    <a href="{{ url_for('sucursales') }}" class="nav-link {% if request.endpoint == 'sucursales' %}active{% endif %}">
+                        <i class="fas fa-building"></i>
+                        <span>Sucursales</span>
+                    </a>
+                    <a href="{{ url_for('usuarios') }}" class="nav-link {% if request.endpoint == 'usuarios' %}active{% endif %}" id="usuariosLink" style="display: none;">
+                        <i class="fas fa-users"></i>
+                        <span>Usuarios</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="nav-right">
+                <div class="user-menu">
+                    <button class="user-button" id="userMenuBtn">
+                        <div class="user-avatar" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span id="userName">Usuario</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="dropdown-header">
+                            <div class="dropdown-user-name" id="dropdownUserName">Nombre Usuario</div>
+                            <div class="dropdown-user-role" id="dropdownUserRole">Rol</div>
+                        </div>
+
+                        <div class="dropdown-menu">
+                            <a href="{{ url_for('perfil') }}" class="dropdown-item">
+                                <i class="fas fa-user-circle"></i> Mi Perfil
+                            </a>
+                            <div class="dropdown-item" id="createUserItem" style="display: none;">
+                                <i class="fas fa-user-plus"></i> Crear Usuario
+                            </div>
+                            <a href="{{ url_for('usuarios') }}" class="dropdown-item" id="manageUsersItem" style="display: none;">
+                                <i class="fas fa-users"></i> Gestionar Usuarios
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-item danger" id="logoutBtn">
+                                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar Móvil -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <aside class="mobile-sidebar" id="mobileSidebar">
+        <div class="sidebar-header-wrapper">
             <a href="{{ url_for('index') }}" class="nav-brand">
                 <i class="fas fa-glasses"></i>
                 <span>Óptica</span>
             </a>
-            <div class="nav-menu">
-                <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
-                    <i class="fas fa-home"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="{{ url_for('ordenes') }}" class="nav-link {% if request.endpoint in ['ordenes', 'nueva_orden', 'ver_orden'] %}active{% endif %}">
-                    <i class="fas fa-clipboard-list"></i>
-                    <span>Órdenes</span>
-                </a>
-                <a href="{{ url_for('clientes') }}" class="nav-link {% if request.endpoint in ['clientes', 'nuevo_cliente', 'ver_cliente'] %}active{% endif %}">
-                    <i class="fas fa-users"></i>
-                    <span>Clientes</span>
-                </a>
-                <a href="{{ url_for('sucursales') }}" class="nav-link {% if request.endpoint == 'sucursales' %}active{% endif %}">
-                    <i class="fas fa-building"></i>
-                    <span>Sucursales</span>
-                </a>
+            <button class="sidebar-close-btn" id="sidebarCloseBtn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="sidebar-user">
+            <div class="user-avatar" id="sidebarUserAvatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="sidebar-user-info-text">
+                <span class="sidebar-user-name" id="sidebarUserName">Usuario</span>
+                <span class="sidebar-user-role" id="sidebarUserRole">Rol</span>
             </div>
         </div>
-    </nav>
+        
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('ordenes') }}" class="nav-link {% if request.endpoint in ['ordenes', 'nueva_orden', 'ver_orden'] %}active{% endif %}">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Órdenes</span>
+            </a>
+            <a href="{{ url_for('clientes') }}" class="nav-link {% if request.endpoint in ['clientes', 'nuevo_cliente', 'ver_cliente'] %}active{% endif %}">
+                <i class="fas fa-users"></i>
+                <span>Clientes</span>
+            </a>
+            <a href="{{ url_for('sucursales') }}" class="nav-link {% if request.endpoint == 'sucursales' %}active{% endif %}">
+                <i class="fas fa-building"></i>
+                <span>Sucursales</span>
+            </a>
+            <a href="{{ url_for('usuarios') }}" class="nav-link {% if request.endpoint == 'usuarios' %}active{% endif %}" id="sidebarUsuariosLink" style="display: none;">
+                <i class="fas fa-users"></i>
+                <span>Usuarios</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <a href="{{ url_for('perfil') }}" class="dropdown-item">
+                <i class="fas fa-user-circle"></i> Mi Perfil
+            </a>
+            <div class="dropdown-item" id="sidebarCreateUserItem" style="display: none;">
+                <i class="fas fa-user-plus"></i> Crear Usuario
+            </div>
+            <a href="{{ url_for('usuarios') }}" class="dropdown-item" id="sidebarManageUsersItem" style="display: none;">
+                <i class="fas fa-users"></i> Gestionar Usuarios
+            </a>
+            <div class="dropdown-item danger" id="sidebarLogoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </div>
+        </div>
+    </aside>
 
     <main class="main-content">
         {% block content %}{% endblock %}
@@ -58,7 +475,202 @@
 
     <div id="modalBackdrop" class="modal-backdrop"></div>
 
+    <!-- Firebase SDK Compat (v9.23.0) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-compat.js"></script>
+    
+    <!-- App Scripts -->
+    <script>
+        // Firebase client config injected from server-side env (.env)
+        window.__FIREBASE_CONFIG = {{ FIREBASE_CONFIG | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    <!-- Navbar User Menu Handler -->
+    <script>
+        // Esperar a que Firebase esté listo
+        function setupUserMenu() {
+            // Comprobar si Firebase está listo
+            if (typeof firebase === 'undefined' || !firebase.apps.length) {
+                // Esperar 100ms e intentar de nuevo
+                setTimeout(setupUserMenu, 100);
+                return;
+            }
+
+            const userMenuBtn = document.getElementById('userMenuBtn');
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileSidebar = document.getElementById('mobileSidebar');
+            const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+            const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+            
+            if (!userMenuBtn && !mobileMenuBtn) return; // No estamos en una página autenticada
+
+            // Lógica Desktop User Menu
+            if (userMenuBtn) {
+                userMenuBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    document.getElementById('userDropdown').classList.toggle('show');
+                });
+            }
+
+            document.addEventListener('click', function(e) {
+                if (userMenuBtn && !userMenuBtn.contains(e.target) && !document.getElementById('userDropdown').contains(e.target)) {
+                    document.getElementById('userDropdown').classList.remove('show');
+                }
+            });
+
+            // Lógica Sidebar Móvil
+            function openSidebar() {
+                mobileSidebar.classList.add('open');
+                sidebarBackdrop.classList.add('show');
+                document.body.style.overflow = 'hidden'; // Evitar scroll en body
+            }
+
+            function closeSidebar() {
+                mobileSidebar.classList.remove('open');
+                sidebarBackdrop.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', openSidebar);
+            }
+            if (sidebarCloseBtn) {
+                sidebarCloseBtn.addEventListener('click', closeSidebar);
+            }
+            if (sidebarBackdrop) {
+                sidebarBackdrop.addEventListener('click', closeSidebar);
+            }
+
+            // Función para renderizar el usuario en el DOM
+            function renderUserData(userData) {
+                // Desktop
+                const userNameEl = document.getElementById('userName');
+                if (userNameEl) userNameEl.textContent = userData.nombre;
+                
+                const dropdownName = document.getElementById('dropdownUserName');
+                if (dropdownName) dropdownName.textContent = userData.nombre;
+                
+                const dropdownRole = document.getElementById('dropdownUserRole');
+                if (dropdownRole) dropdownRole.textContent = userData.rol.charAt(0).toUpperCase() + userData.rol.slice(1);
+
+                // Mobile Sidebar
+                const sidebarUserName = document.getElementById('sidebarUserName');
+                if (sidebarUserName) sidebarUserName.textContent = userData.nombre;
+                
+                const sidebarUserRole = document.getElementById('sidebarUserRole');
+                if (sidebarUserRole) sidebarUserRole.textContent = userData.rol.charAt(0).toUpperCase() + userData.rol.slice(1);
+
+                // Actualizar avatars
+                const initials = userData.nombre.split(' ').map(n => n[0]).join('').toUpperCase();
+                const avatarContent = `<span style="font-weight: 700;">${initials}</span>`;
+                
+                const avatar = document.getElementById('userAvatar');
+                if (avatar) avatar.innerHTML = avatarContent;
+                
+                const sidebarAvatar = document.getElementById('sidebarUserAvatar');
+                if (sidebarAvatar) sidebarAvatar.innerHTML = avatarContent;
+
+                // Mostrar opciones de admin
+                if (userData.rol === 'admin') {
+                    // Desktop
+                    const usuariosLink = document.getElementById('usuariosLink');
+                    const createUserItem = document.getElementById('createUserItem');
+                    const manageUsersItem = document.getElementById('manageUsersItem');
+
+                    if (usuariosLink) usuariosLink.style.display = 'flex';
+                    if (createUserItem) createUserItem.style.display = 'flex';
+                    if (manageUsersItem) manageUsersItem.style.display = 'flex';
+
+                    // Mobile
+                    const sidebarUsuariosLink = document.getElementById('sidebarUsuariosLink');
+                    const sidebarCreateUserItem = document.getElementById('sidebarCreateUserItem');
+                    const sidebarManageUsersItem = document.getElementById('sidebarManageUsersItem');
+
+                    if (sidebarUsuariosLink) sidebarUsuariosLink.style.display = 'block';
+                    if (sidebarCreateUserItem) sidebarCreateUserItem.style.display = 'block';
+                    if (sidebarManageUsersItem) sidebarManageUsersItem.style.display = 'block';
+
+                    // Listeners creacion
+                    if (createUserItem && !createUserItem.hasAttribute('data-listener')) {
+                        createUserItem.addEventListener('click', function() {
+                            window.location.href = '{{ url_for("alta_empleado") }}';
+                        });
+                        createUserItem.setAttribute('data-listener', 'true');
+                    }
+                    if (sidebarCreateUserItem && !sidebarCreateUserItem.hasAttribute('data-listener')) {
+                        sidebarCreateUserItem.addEventListener('click', function() {
+                            window.location.href = '{{ url_for("alta_empleado") }}';
+                        });
+                        sidebarCreateUserItem.setAttribute('data-listener', 'true');
+                    }
+                }
+            }
+
+            // Renderizado optimista: mostrar la info del usuario en caché inmediatamente si existe
+            const cachedUser = localStorage.getItem('optica_user_data');
+            if (cachedUser) {
+                try {
+                    renderUserData(JSON.parse(cachedUser));
+                } catch (e) {
+                    console.error('Error parseando caché de usuario', e);
+                }
+            }
+
+            // Actualizar información del usuario (usando el endpoint servidor /api/me)
+            firebase.auth().onAuthStateChanged(async function(user) {
+                if (user) {
+                    try {
+                        // Obtener ID token y solicitar el perfil al servidor
+                        const idToken = await user.getIdToken();
+                        const resp = await fetch('/api/me', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + idToken
+                            },
+                            body: JSON.stringify({})
+                        });
+
+                        if (!resp.ok) {
+                            throw new Error('Server returned ' + resp.status);
+                        }
+
+                        const json = await resp.json();
+                        if (json.success && json.usuario) {
+                            const userData = json.usuario;
+                            localStorage.setItem('optica_user_data', JSON.stringify(userData));
+                            renderUserData(userData);
+                        }
+                    } catch (error) {
+                        console.error('❌ Error cargando datos del usuario:', error);
+                    }
+                }
+            });
+
+            // Logout
+            const handleLogout = () => {
+                firebase.auth().signOut().then(() => {
+                    window.location.href = '/login';
+                });
+            };
+
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+            
+            const sidebarLogoutBtn = document.getElementById('sidebarLogoutBtn');
+            if (sidebarLogoutBtn) sidebarLogoutBtn.addEventListener('click', handleLogout);
+        }
+
+        // Inicializar cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupUserMenu);
+        } else {
+            setupUserMenu();
+        }
+    </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>

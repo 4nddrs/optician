@@ -88,6 +88,21 @@ def get_client_by_ci(ci):
         return cliente
     return None
 
+def get_user_by_id(user_id):
+    """Get a user by their UID from the 'usuarios' collection."""
+    if not user_id:
+        return None
+    try:
+        doc = db.collection('usuarios').document(user_id).get()
+        if doc.exists:
+            user = doc.to_dict()
+            user['id'] = doc.id
+            return user
+        return None
+    except Exception as e:
+        print(f"Error getting user by ID {user_id}: {e}")
+        return None
+
 def create_client(data):
     """Create a new client"""
     doc_ref = db.collection('clientes').document()

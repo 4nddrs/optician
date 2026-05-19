@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función auxiliar para verificar si el usuario es admin
+    function isAdmin() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+    }
+    
+    // Función auxiliar para verificar si el usuario es empleado
+    function isEmpleado() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'empleado';
+    }
+    
+    // Función auxiliar para obtener la sucursal del usuario
+    function getUserSucursal() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.sucursal_id;
+    }
+    
+    // Función auxiliar para verificar autenticación
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // ========================================
+    // COLECCIÓN: usuarios
+    // ========================================
+    match /usuarios/{userId} {
+      
+      // Lectura: El usuario autenticado puede leer su propio perfil
+      // El admin puede leer todos los perfiles
+      allow read: if isAuthenticated() && 
+                    (request.auth.uid == userId || isAdmin());
+      
+      // Creación: Solo un usuario con rol 'admin' puede crear usuarios
+      allow create: if isAuthenticated() && isAdmin() &&
+                       request.resource.data.rol in ['admin', 'empleado'] &&
+                       request.resource.data.sucursal_id in ['1', '2', '3', '4'] &&
+                       request.resource.data.keys().hasAll(['nombre', 'email', 'rol', 'sucursal_id']);
+      
+      // Actualización: 
+      // - El usuario puede actualizar su propio perfil (solo ciertos campos)
+      // - El admin puede actualizar cualquier usuario
+      allow update: if isAuthenticated() &&
+                       (request.auth.uid == userId || isAdmin());
+      
+      // Eliminación: Solo admin puede "eliminar" (marcar como inactivo)
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ========================================
+    // COLECCIÓN: clientes
+    // ========================================
+    match /clientes/{clientId} {
+      
+      // Lectura: Todos los usuarios autenticados pueden leer
+      allow read: if isAuthenticated();
+      
+      // Creación: Solo admin y empleados autenticados pueden crear
+      allow create: if isAuthenticated() &&
+                       request.resource.data.keys().hasAll(['ci', 'nombre_completo', 'telefono']);
+      
+      // Actualización: Admin y el que creó pueden actualizar
+      allow update: if isAuthenticated() &&
+                       (isAdmin() || request.auth.uid == resource.data.creado_por);
+      
+      // Eliminación: Solo admin
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ========================================
+    // COLECCIÓN: ordenes_trabajo
+    // ========================================
+    match /ordenes_trabajo/{ordenId} {
+      
+      // Lectura: 
+      // - Admin: puede leer todas
+      // - Empleado: solo de su sucursal
+      allow read: if isAuthenticated() &&
+                     (isAdmin() || 
+                      resource.data.id_sucursal == getUserSucursal());
+      
+      // Creación:
+      // - Admin: puede crear para cualquier sucursal
+      // - Empleado: solo para su propia sucursal
+      allow create: if isAuthenticated() &&
+                       (isAdmin() || 
+                        request.resource.data.id_sucursal == getUserSucursal()) &&
+                       request.resource.data.keys().hasAll(['id_sucursal', 'id_cliente', 'estado']);
+      
+      // Actualización:
+      // - Admin: puede actualizar cualquier orden
+      // - Empleado: solo de su sucursal
+      allow update: if isAuthenticated() &&
+                       (isAdmin() || 
+                        resource.data.id_sucursal == getUserSucursal());
+      
+      // Eliminación: Solo admin
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ========================================
+    // COLECCIÓN: sucursales
+    // ========================================
+    match /sucursales/{sucursalId} {
+      
+      // Lectura: Todos los usuarios autenticados pueden leer
+      allow read: if isAuthenticated();
+      
+      // Creación/Actualización/Eliminación: Solo admin
+      allow create, update, delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ========================================
+    // COLECCIÓN: reportes (si existe)
+    // ========================================
+    match /reportes/{reportId} {
+      
+      // Lectura:
+      // - Admin: puede leer todos
+      // - Empleado: solo de su sucursal
+      allow read: if isAuthenticated() &&
+                     (isAdmin() || 
+                      resource.data.sucursal_id == getUserSucursal());
+      
+      // Creación: Solo admin
+      allow create: if isAuthenticated() && isAdmin();
+      
+      // Actualización/Eliminación: Solo admin
+      allow update, delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // ========================================
+    // COLECCIÓN: configuracion
+    // ========================================
+    match /configuracion/{docId} {
+      
+      // Lectura: Todos los usuarios autenticados pueden leer
+      allow read: if isAuthenticated();
+      
+      // Escritura: Solo admin
+      allow write: if isAuthenticated() && isAdmin();
+    }
+    
+    // ========================================
+    // REGLA POR DEFECTO (deny all)
+    // ========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

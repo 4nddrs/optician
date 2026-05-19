@@ -1,3 +1,12 @@
+// Eliminación del Service Worker para evitar intercepción defectuosa de fetch
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+            registration.unregister();
+        }
+    });
+}
+
 // General utilities
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -36,6 +45,35 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Ensure backdrop visibility matches actual modals (fix residual blur)
+function ensureBackdropState() {
+    const backdrop = document.getElementById('modalBackdrop');
+    if (!backdrop) return;
+    // Consider modals shown either by .show class or by inline display style
+    const anyModalShownByClass = document.querySelectorAll('.modal.show, .modal-backdrop.show').length > 0;
+    const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+    const anyBackdropVisibleByStyle = backdrops.some(b => {
+        const cs = window.getComputedStyle(b);
+        return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
+    });
+
+    const anyModalShown = anyModalShownByClass || anyBackdropVisibleByStyle;
+    if (anyModalShown) {
+        backdrop.classList.add('show');
+    } else {
+        backdrop.classList.remove('show');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Run on load and periodically to recover from inconsistent states
+document.addEventListener('DOMContentLoaded', function() {
+    ensureBackdropState();
+    // Safety: re-check a couple of times shortly after load
+    setTimeout(ensureBackdropState, 200);
+    setTimeout(ensureBackdropState, 1000);
+});
+
 // Cerrar modales con tecla ESC
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
@@ -62,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Show notifications
-function showNotification(message, type = 'success') {
+function showNotification(message, type = 'success', duration = 3000) {
     const notification = document.createElement('div');
     notification.className = `notificacion notificacion-${type}`;
     notification.textContent = message;
@@ -83,11 +121,11 @@ function showNotification(message, type = 'success') {
     document.body.appendChild(notification);
     
     setTimeout(() => {
-        notification.style.animation = 'fadeIn 0.3s ease reverse';
+        notification.style.animation = 'fadeOut 0.3s ease forwards';
         setTimeout(() => {
             notification.remove();
         }, 300);
-    }, 3000);
+    }, duration);
 }
 
 // Formatear fecha
@@ -144,6 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Confirm before leaving page with modified form
 let formModified = false;
+let allowUnload = false; // Flag to bypass the beforeunload confirmation
 
 document.addEventListener('DOMContentLoaded', function() {
     const forms = document.querySelectorAll('form');
@@ -164,11 +203,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 window.addEventListener('beforeunload', function(e) {
-    if (formModified) {
+    if (formModified && !allowUnload) {
         e.preventDefault();
         e.returnValue = '';
     }
 });
+
+// Call this function before programmatically navigating away
+function bypassUnloadConfirmation() {
+    allowUnload = true;
+}
 
 // Scroll suave a elementos
 function scrollToElement(elementId) {

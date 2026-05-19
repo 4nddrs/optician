@@ -1,0 +1,935 @@
+{% extends "base.html" %}
+
+{% block title %}Usuarios - Óptica{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div class="header-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="header-text">
+            <h1>Gestión de Usuarios</h1>
+            <p>Administra el equipo de trabajo</p>
+        </div>
+    </div>
+    <div id="adminOnlyButton" class="header-action" style="display: none;">
+        <a href="{{ url_for('alta_empleado') }}" class="btn-create">
+            <i class="fas fa-user-plus"></i> Crear Nuevo
+        </a>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Filtros -->
+    <div class="filters-section">
+        <div class="filter-group">
+            <label for="filterRole">Rol:</label>
+            <select id="filterRole" class="filter-input">
+                <option value="">Todos</option>
+                <option value="admin">Administrador</option>
+                <option value="empleado">Empleado</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filterSucursal">Sucursal:</label>
+            <select id="filterSucursal" class="filter-input">
+                <option value="">Todas</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <input type="text" id="searchInput" class="filter-input" placeholder="Buscar por nombre o email...">
+        </div>
+    </div>
+
+    <!-- Tabla de Usuarios -->
+    <div class="usuarios-table">
+        <div class="table-header">
+            <div class="table-row">
+                <div class="table-cell header">Usuario</div>
+                <div class="table-cell header">Email</div>
+                <div class="table-cell header">Rol</div>
+                <div class="table-cell header">Sucursal</div>
+                <div class="table-cell header">Estado</div>
+                <div class="table-cell header">Acciones</div>
+            </div>
+        </div>
+        <div class="table-body" id="usuariosTableBody">
+            <div class="table-row loading">
+                <div class="table-cell">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensaje vacío -->
+    <div id="emptyState" class="empty-state" style="display: none;">
+        <i class="fas fa-users"></i>
+        <h3>No hay usuarios</h3>
+        <p>No se encontraron usuarios que coincidan con los filtros seleccionados.</p>
+    </div>
+
+    <div class="pagination" id="paginationBar" style="display: none;">
+        <button class="btn-small" id="prevPageBtn"><i class="fas fa-chevron-left"></i> Anterior</button>
+        <span id="paginationInfo">Página 1 de 1</span>
+        <button class="btn-small" id="nextPageBtn">Siguiente <i class="fas fa-chevron-right"></i></button>
+    </div>
+</div>
+
+<!-- Modal de Detalles de Usuario -->
+<div id="userDetailModal" class="modal-backdrop" style="display: none;">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-header">
+            <h2>Detalles del Usuario</h2>
+        </div>
+        <div class="modal-body">
+            <form id="formUpdateUser">
+                <input type="hidden" id="detailUid">
+                <div class="user-detail-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="detailName">Nombre</label>
+                        <input type="text" id="detailName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="detailEmail">Email</label>
+                        <input type="email" id="detailEmail" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="detailRole">Rol</label>
+                        <select id="detailRole" class="form-input">
+                            <option value="admin">Administrador</option>
+                            <option value="empleado">Empleado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="detailSucursal">Sucursal</label>
+                        <select id="detailSucursal" class="form-input" required>
+                            <!-- Opciones se cargarán dinámicamente -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Miembro desde</label>
+                        <div id="detailFechaCreacion" style="padding: 0.75rem; background: var(--bg-primary); border-radius: var(--border-radius-small); border: 1px solid var(--border-color); color: var(--text-secondary);"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estado</label>
+                        <div class="switch-container">
+                            <label class="switch">
+                                <input type="checkbox" id="detailActivoSwitch">
+                                <span class="slider round"></span>
+                            </label>
+                            <span id="detailActivoText" class="switch-label"></span>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" id="btnCloseUserDetail">Cancelar</button>
+            <button type="button" class="btn-primary" id="btnUpdateUser">Guardar Cambios</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos para el switch */
+.switch-container {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--color-success);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--color-success);
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+.switch-label {
+    font-weight: 500;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+.header-action {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.btn-create {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--gradient-primary);
+    color: white;
+    border-radius: var(--border-radius-small);
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.btn-create:hover {
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-2px);
+}
+
+.filters-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: var(--surface-primary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    align-items: end; /* Alinea los elementos al final */
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.filter-input {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.filter-input:focus {
+    outline: none;
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.usuarios-table {
+    background: var(--surface-primary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.table-header {
+    background: rgba(139, 92, 246, 0.1);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.table-row {
+    display: grid;
+    grid-template-columns: 200px 220px 120px 120px 100px 100px;
+    gap: 0;
+    padding: 0;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+}
+
+.table-row.loading {
+    padding: var(--spacing-lg);
+    text-align: center;
+    color: var(--text-secondary);
+    grid-column: 1 / -1;
+}
+
+.table-row.empty {
+    padding: var(--spacing-xl);
+    text-align: center;
+    color: var(--text-secondary);
+    grid-column: 1 / -1;
+}
+
+.table-cell {
+    padding: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table-cell.header {
+    font-weight: 600;
+    color: var(--text-primary);
+    background: transparent;
+}
+
+.table-body .table-row:hover {
+    background: rgba(139, 92, 246, 0.05);
+    cursor: pointer;
+}
+
+.table-body .table-row:active {
+    background: rgba(139, 92, 246, 0.1);
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--border-radius-badge);
+    background: var(--gradient-primary);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-success);
+}
+
+.status-dot.inactive {
+    background: var(--color-error);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-small {
+    padding: 0.5rem;
+    border: none;
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-small:hover {
+    background: var(--color-primary-light);
+    color: white;
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-xl);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+.empty-state p {
+    margin: var(--spacing-md) 0 0;
+    color: var(--text-muted);
+}
+
+.pagination {
+    margin-top: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+}
+
+.pagination #paginationInfo {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+#userDetailModal.modal-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    pointer-events: auto; /* IMPORTANTE: Permitir interacciones */
+}
+
+.modal {
+    background: var(--surface-primary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+    animation: slideIn 0.3s ease;
+    display: block;
+    position: relative;
+    width: 100%;
+    height: auto;
+}
+
+.modal-header,
+.modal-footer {
+    padding: var(--spacing-lg);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+}
+
+.user-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+}
+
+.btn-secondary,
+.btn-danger {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius-small);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-secondary {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    border-color: var(--color-primary-light);
+    background: var(--bg-primary);
+}
+
+.btn-danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: #fca5a5;
+}
+
+@media (max-width: 1024px) {
+    .table-row {
+        grid-template-columns: 150px 180px 100px 100px 80px 80px;
+    }
+
+    .table-cell {
+        font-size: 0.9rem;
+        padding: var(--spacing-sm);
+    }
+}
+
+@media (max-width: 768px) {
+    .filters-section {
+        grid-template-columns: 1fr;
+    }
+
+    .table-row {
+        grid-template-columns: 1fr;
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        border: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .table-header {
+        display: none;
+    }
+
+    .table-cell::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-secondary);
+        display: block;
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+        min-width: 100px;
+    }
+
+    .user-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Forzar eliminación del Service Worker por si está bloqueando las peticiones
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+            registration.unregister();
+            console.log('Se desinstaló el Service Worker antiguo.');
+        }
+    });
+}
+let allUsers = [];
+let allSucursales = [];
+// currentUser ya está declarado en auth.js globalmente
+let currentPage = 1;
+let totalPages = 1;
+const PAGE_SIZE = 10;
+
+async function loadSucursales() {
+    try {
+        const response = await fetch('/api/sucursales');
+        const data = await response.json();
+        if (data.success) {
+            allSucursales = data.sucursales;
+            populateSucursalSelect('detailSucursal', allSucursales);
+            populateFilterSucursal(allSucursales); // <-- Nueva línea
+        }
+    } catch (error) {
+        console.error('Error cargando sucursales:', error);
+    }
+}
+
+function populateSucursalSelect(selectId, sucursales) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = sucursales.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+}
+
+function populateFilterSucursal(sucursales) {
+    const select = document.getElementById('filterSucursal');
+    // Guardamos la opción "Todas" y limpiamos el resto
+    const firstOption = select.options[0];
+    select.innerHTML = '';
+    select.appendChild(firstOption);
+    
+    sucursales.forEach(s => {
+        const option = document.createElement('option');
+        option.value = s.id;
+        option.textContent = s.nombre;
+        select.appendChild(option);
+    });
+}
+
+function renderLoading() {
+    const tableBody = document.getElementById('usuariosTableBody');
+    tableBody.innerHTML = '<div class="table-row loading"><div class="table-cell"><i class="fas fa-spinner fa-spin"></i> </div></div>';
+}
+
+function renderError(message) {
+    const tableBody = document.getElementById('usuariosTableBody');
+    tableBody.innerHTML = `<div class="table-row empty"><div class="table-cell"><i class="fas fa-exclamation-triangle"></i> ${message}</div></div>`;
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('paginationBar').style.display = 'none';
+}
+
+async function loadUsers() {
+    renderLoading();
+
+    const role = document.getElementById('filterRole').value;
+    const sucursal = document.getElementById('filterSucursal').value;
+    const search = document.getElementById('searchInput').value.trim();
+
+    const params = new URLSearchParams({
+        page: String(currentPage),
+        page_size: String(PAGE_SIZE)
+    });
+    if (role) params.set('rol', role);
+    if (sucursal) params.set('sucursal', sucursal);
+    if (search) params.set('search', search);
+
+    try {
+        const response = await fetch('/api/usuarios?' + params.toString());
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'No se pudo cargar la lista de usuarios');
+        }
+
+        allUsers = data.usuarios || [];
+        totalPages = (data.pagination && data.pagination.total_pages) ? data.pagination.total_pages : 1;
+        currentPage = (data.pagination && data.pagination.page) ? data.pagination.page : 1;
+
+        console.log("Usuarios recibidos del servidor:", allUsers);
+
+        renderUsers(allUsers);
+        renderPagination(data.pagination || { page: 1, total_pages: 1, has_prev: false, has_next: false, total: 0 });
+    } catch (error) {
+        console.error('Error cargando usuarios:', error);
+        renderError('Error cargando usuarios. Intenta recargar la página.');
+    }
+}
+
+function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function renderUsers(usuarios) {
+    const tableBody = document.getElementById('usuariosTableBody');
+    
+    if (usuarios.length === 0) {
+        tableBody.innerHTML = '<div class="table-row empty"><div class="table-cell"><i class="fas fa-users"></i> No hay usuarios</div></div>';
+        document.getElementById('emptyState').style.display = 'block';
+        document.getElementById('paginationBar').style.display = 'none';
+        return;
+    }
+
+    document.getElementById('emptyState').style.display = 'none';
+    
+    tableBody.innerHTML = usuarios.map(user => {
+        const userId = escapeHTML(user.id || user.uid);
+        const userName = escapeHTML(user.nombre);
+        const userEmail = escapeHTML(user.email);
+        const userRole = escapeHTML(user.rol);
+        const userActiveClass = user.activo ? '' : 'inactive';
+        const userActiveText = user.activo ? 'Activo' : 'Inactivo';
+        
+        // Buscar el nombre de la sucursal
+        const sucursal = allSucursales.find(s => s.id === user.sucursal_id);
+        const sucursalNombre = sucursal ? escapeHTML(sucursal.nombre) : 'No asignada';
+
+        return `
+        <div class="table-row" onclick="showUserDetail('${userId}')">
+            <div class="table-cell" data-label="Usuario">
+                <i class="fas fa-user-circle"></i>
+                <span>${userName}</span>
+            </div>
+            <div class="table-cell" data-label="Email">
+                ${userEmail}
+            </div>
+            <div class="table-cell" data-label="Rol">
+                <span class="role-badge">${userRole}</span>
+            </div>
+            <div class="table-cell" data-label="Sucursal">
+                ${sucursalNombre}
+            </div>
+            <div class="table-cell" data-label="Estado">
+                <div class="status-indicator">
+                    <div class="status-dot ${userActiveClass}"></div>
+                    <span>${userActiveText}</span>
+                </div>
+            </div>
+            <div class="table-cell" data-label="Acciones">
+                <div class="action-buttons">
+                    <button class="btn-small" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+function renderPagination(pagination) {
+    const bar = document.getElementById('paginationBar');
+    const info = document.getElementById('paginationInfo');
+    const prev = document.getElementById('prevPageBtn');
+    const next = document.getElementById('nextPageBtn');
+
+    if (!pagination || (pagination.total || 0) === 0) {
+        bar.style.display = 'none';
+        return;
+    }
+
+    bar.style.display = 'flex';
+    info.textContent = `Página ${pagination.page} de ${pagination.total_pages} (${pagination.total} usuarios)`;
+    prev.disabled = !pagination.has_prev;
+    next.disabled = !pagination.has_next;
+}
+
+function showUserDetail(uid) {
+    const user = allUsers.find(u => u.uid === uid || u.id === uid);
+    if (!user) return;
+
+    document.getElementById('detailUid').value = uid;
+    document.getElementById('detailName').value = user.nombre || '';
+    document.getElementById('detailEmail').value = user.email || '';
+    document.getElementById('detailRole').value = user.rol || 'vendedor';
+    document.getElementById('detailSucursal').value = user.sucursal_id || '';
+    
+    const activoSwitch = document.getElementById('detailActivoSwitch');
+    const activoText = document.getElementById('detailActivoText');
+    
+    activoSwitch.checked = user.activo;
+    activoText.textContent = user.activo ? 'Activada' : 'Desactivada';
+    
+    if (user.fecha_creacion) {
+        let date;
+        if (typeof user.fecha_creacion === 'number') {
+            date = new Date(user.fecha_creacion * 1000);
+        } else {
+            date = user.fecha_creacion.toDate ? user.fecha_creacion.toDate() : new Date(user.fecha_creacion);
+        }
+        document.getElementById('detailFechaCreacion').textContent = date.toLocaleDateString('es-AR');
+    }
+
+    document.getElementById('userDetailModal').style.display = 'flex';
+}
+
+document.getElementById('btnUpdateUser').addEventListener('click', async function() {
+    const uid = document.getElementById('detailUid').value;
+    const btn = this;
+    const originalText = btn.textContent;
+    btn.textContent = 'Guardando...';
+    btn.disabled = true;
+
+    try {
+        const idToken = await firebase.auth().currentUser.getIdToken();
+        const data = {
+            nombre: document.getElementById('detailName').value,
+            email: document.getElementById('detailEmail').value,
+            rol: document.getElementById('detailRole').value,
+            sucursal_id: document.getElementById('detailSucursal').value,
+            activo: document.getElementById('detailActivoSwitch').checked
+        };
+
+        const res = await fetch(`/api/usuarios/${uid}/actualizar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify(data)
+        });
+
+        const json = await res.json();
+        if (json.success) {
+            showNotification('Usuario actualizado con éxito', 'success');
+            document.getElementById('userDetailModal').style.display = 'none';
+            loadUsers(); // Refresh
+        } else {
+            showNotification('Error: ' + json.error, 'error');
+        }
+    } catch (e) {
+        showNotification('Error conectando al servidor', 'error');
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+});
+
+document.getElementById('detailActivoSwitch').addEventListener('change', function() {
+    const activoText = document.getElementById('detailActivoText');
+    activoText.textContent = this.checked ? 'Activada' : 'Desactivada';
+});
+
+document.getElementById('btnCloseUserDetail').addEventListener('click', function() {
+    document.getElementById('userDetailModal').style.display = 'none';
+});
+
+document.getElementById('userDetailModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        this.style.display = 'none';
+    }
+});
+
+// Event listeners para filtros
+document.getElementById('filterRole').addEventListener('change', function() {
+    currentPage = 1;
+    loadUsers();
+});
+
+document.getElementById('filterSucursal').addEventListener('change', function() {
+    currentPage = 1;
+    loadUsers();
+});
+
+let searchDebounce = null;
+document.getElementById('searchInput').addEventListener('input', function() {
+    currentPage = 1;
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => loadUsers(), 300);
+});
+
+document.getElementById('prevPageBtn').addEventListener('click', function() {
+    if (currentPage > 1) {
+        currentPage -= 1;
+        loadUsers();
+    }
+});
+
+document.getElementById('nextPageBtn').addEventListener('click', function() {
+    if (currentPage < totalPages) {
+        currentPage += 1;
+        loadUsers();
+    }
+});
+
+// Verificar si es admin después de que Firebase inicialice
+if (typeof waitForFirebaseReady === 'function') {
+    waitForFirebaseReady().then(() => {
+        setupUserAuthListener();
+    });
+} else {
+    // Fallback por si auth.js falla
+    function checkFirebaseAndSetup() {
+        if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+            setupUserAuthListener();
+        } else {
+            setTimeout(checkFirebaseAndSetup, 100);
+        }
+    }
+    checkFirebaseAndSetup();
+}
+
+function setupUserAuthListener() {
+    firebase.auth().onAuthStateChanged(async function(user) {
+        if (!user) {
+            window.location.href = '/login';
+            return;
+        }
+
+        // 1. Inmediatamente usar datos cacheados si existen para la UI optimista
+        try {
+            const cachedUser = localStorage.getItem('optica_user_data');
+            if (cachedUser) {
+                const parsed = JSON.parse(cachedUser);
+                currentUser = { ...parsed, uid: user.uid };
+                if (currentUser.rol === 'admin') {
+                    document.getElementById('adminOnlyButton').style.display = 'flex';
+                }
+            }
+        } catch(e) {}
+
+        // 2. Disparar loadUsers() asíncronamente (sin esperar a /api/me)
+        console.log("Iniciando llamada a loadUsers()...");
+        loadUsers();
+
+        // 3. Validar perfil sigilosamente de fondo
+        try {
+            const idToken = await user.getIdToken();
+            const resp = await fetch('/api/me', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + idToken
+                },
+                body: JSON.stringify({})
+            });
+
+            if (resp.ok) {
+                const json = await resp.json();
+                if (json.success && json.usuario) {
+                    currentUser = { ...json.usuario, uid: user.uid };
+                    localStorage.setItem('optica_user_data', JSON.stringify(json.usuario));
+                    if (currentUser.rol === 'admin') {
+                        document.getElementById('adminOnlyButton').style.display = 'flex';
+                    } else {
+                        document.getElementById('adminOnlyButton').style.display = 'none';
+                    }
+                }
+            } else {
+                console.warn('No se pudo obtener perfil desde /api/me');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+        
+        // Cargar sucursales
+        await loadSucursales();
+    });
+}
+</script>
+{% endblock %}

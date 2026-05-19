@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Óptica</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon/favicon-96x96.png') }}" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon/favicon.svg') }}" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon/favicon.ico') }}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicon/apple-touch-icon.png') }}" />
+    <link rel="manifest" href="{{ url_for('static', filename='favicon/site.webmanifest') }}" />
+    
+    <!-- Meta Tags -->
+    <meta name="apple-mobile-web-app-title" content="Óptica" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0a0e1a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#0a0e1a" />
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: var(--spacing-md);
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .login-box {
+            background: var(--surface-primary);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.4s ease;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .login-logo {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .login-logo i {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-small);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--color-primary-light);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+            background: var(--surface-secondary);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.875rem;
+            border: none;
+            border-radius: var(--border-radius-small);
+            background: var(--gradient-primary);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-login:hover:not(:disabled) {
+            box-shadow: var(--shadow-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .form-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: var(--border-radius-small);
+            padding: 0.75rem;
+            margin-bottom: var(--spacing-md);
+            color: #fca5a5;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .form-error.show {
+            display: block;
+        }
+
+        .form-error i {
+            margin-right: 0.5rem;
+        }
+
+        .loading-spinner {
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        .btn-login.loading .loading-spinner {
+            display: inline-block;
+        }
+
+        .btn-login.loading span {
+            margin-left: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: var(--spacing-md);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .dev-mode {
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: none;
+        }
+
+        .dev-mode.show {
+            display: block;
+        }
+
+        @media (max-width: 480px) {
+            .login-box {
+                padding: var(--spacing-md);
+            }
+
+            .login-logo {
+                font-size: 2.5rem;
+            }
+
+            .login-title {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <div class="login-logo">
+                    <i class="fas fa-glasses"></i>
+                </div>
+                <div class="login-title">Óptica</div>
+                <div class="login-subtitle">Sistema de Gestión</div>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-error" id="errorMessage">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="errorText"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="email">
+                        <i class="fas fa-envelope"></i> Email
+                    </label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        class="form-input" 
+                        placeholder="correo@ejemplo.com"
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">
+                        <i class="fas fa-lock"></i> Contraseña
+                    </label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        class="form-input" 
+                        placeholder="••••••••"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+
+                <button type="submit" class="btn-login" id="loginBtn">
+                    <div class="loading-spinner"></div>
+                    <span>Iniciar Sesión</span>
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>Ingresa tus credenciales para acceder al sistema</p>
+            </div>
+
+            <div class="dev-mode" id="devMode">
+                <p><strong>Modo desarrollo activado</strong></p>
+                <p>Presiona F12 para ver la consola</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para cambio de contraseña obligatorio -->
+    <div id="changePasswordModal" class="modal-backdrop" style="display: none;">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>Cambiar Contraseña</h2>
+                <p>Es tu primer acceso. Debes establecer tu contraseña personal.</p>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <div class="form-group">
+                        <label class="form-label">Nueva Contraseña</label>
+                        <input 
+                            type="password" 
+                            id="newPassword" 
+                            class="form-input" 
+                            placeholder="••••••••"
+                            minlength="6"
+                            required
+                        >
+                        <small style="color: var(--text-secondary);">Mínimo 6 caracteres</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirmar Contraseña</label>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            class="form-input" 
+                            placeholder="••••••••"
+                            minlength="6"
+                            required
+                        >
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btnCancelChangePassword">Cancelar</button>
+                <button type="button" class="btn-primary" id="btnConfirmChangePassword">
+                    <span>Cambiar Contraseña</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Compat (v9.23.0) - Incluye app, auth, firestore, etc -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-compat.js"></script>
+    <script>
+        // Inyectar configuración cliente de Firebase desde el servidor (.env)
+        window.__FIREBASE_CONFIG = {{ FIREBASE_CONFIG | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    
+    <script>
+        // Verificar que Firebase se cargó
+        window.addEventListener('load', function() {
+            // Esperar a que firebase-config termine de intentar inicializar
+            setTimeout(() => {
+                if (typeof firebase === 'undefined' || !firebase.apps.length) {
+                    console.error('❌ FIREBASE NO CARGÓ');
+                    document.getElementById('errorMessage').classList.add('show');
+                    document.getElementById('errorText').textContent = 
+                        'Error: No se pudo conectar a Firebase. Verifica tu conexión a internet.';
+                }
+            }, 2000);
+        });
+
+        // Activar modo desarrollo en localhost
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            document.getElementById('devMode').classList.add('show');
+        }
+
+        // Manejar formulario de login
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('errorMessage');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // Verificar que Firebase esté disponible
+            if (typeof firebase === 'undefined' || !firebase.apps.length) {
+                errorDiv.classList.add('show');
+                document.getElementById('errorText').textContent = 'Error: Firebase no está disponible. Recarga la página.';
+                return;
+            }
+            
+            errorDiv.classList.remove('show');
+            loginBtn.disabled = true;
+            loginBtn.classList.add('loading');
+            
+            try {
+                const result = await loginWithEmail(email, password);
+                
+                if (result.success) {
+                    console.log('✅ Login iniciado, esperando redireccionamiento...');
+                } else {
+                    errorDiv.classList.add('show');
+                    document.getElementById('errorText').textContent = result.error;
+                }
+            } catch (error) {
+                console.error('❌ Error inesperado:', error);
+                errorDiv.classList.add('show');
+                document.getElementById('errorText').textContent = 'Error de conexión. Intenta de nuevo.';
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.classList.remove('loading');
+            }
+        });
+
+        // Cambio de contraseña
+        document.getElementById('btnConfirmChangePassword').addEventListener('click', async function() {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                alert('Las contraseñas no coinciden');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                alert('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+
+            try {
+                const user = firebase.auth().currentUser;
+                const result = await changePassword(user.uid, newPassword);
+                
+                if (result.success) {
+                    alert('✅ Contraseña actualizada. Redirigiendo...');
+                    window.location.href = '/';
+                } else {
+                    alert('❌ ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Error al cambiar contraseña: ' + error.message);
+            }
+        });
+
+        document.getElementById('btnCancelChangePassword').addEventListener('click', function() {
+            firebase.auth().signOut();
+        });
+    </script>
+</body>
+</html>

@@ -1,5 +1,81 @@
-// Functions for new order page
-console.log('nueva_orden.js loaded successfully');
+// Functions for edit order page
+console.log('editar_orden.js loaded successfully');
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Populate form with existing order data if available
+    if (window.ORDEN_A_EDITAR) {
+        const o = window.ORDEN_A_EDITAR;
+        const form = document.getElementById('formEditarOrden') || document.getElementById('formNuevaOrden');
+        
+        if (form) {
+            // Pre-fill main inputs
+            if (document.getElementById('id_sucursal')) document.getElementById('id_sucursal').value = o.id_sucursal || '';
+            if (document.getElementById('fecha_entrega')) document.getElementById('fecha_entrega').value = o.fecha_entrega || '';
+            
+            // Client data
+            if (window.CLIENTE_A_EDITAR) {
+                const c = window.CLIENTE_A_EDITAR;
+                if (document.getElementById('id_cliente')) document.getElementById('id_cliente').value = c.id || o.id_cliente || '';
+                if (document.getElementById('nombre_cliente')) document.getElementById('nombre_cliente').value = c.nombre_completo || '';
+                if (document.getElementById('telefono_cliente')) document.getElementById('telefono_cliente').value = c.telefono || '';
+                if (document.getElementById('buscarCliente')) document.getElementById('buscarCliente').value = c.ci || '';
+            }
+
+            // Specs
+            if (o.especificaciones) {
+                if (document.getElementById('tipo_lente')) document.getElementById('tipo_lente').value = o.especificaciones.tipo_lente || '';
+                if (document.getElementById('material')) document.getElementById('material').value = o.especificaciones.material || '';
+                if (document.getElementById('marca_lente')) document.getElementById('marca_lente').value = o.especificaciones.marca_lente || '';
+                
+                // Tratamientos checkboxes
+                if (o.especificaciones.tratamientos && Array.isArray(o.especificaciones.tratamientos)) {
+                    o.especificaciones.tratamientos.forEach(trat => {
+                        const cb = document.querySelector(`input[name="tratamientos[]"][value="${trat}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
+            }
+
+            // Frame
+            if (o.montura) {
+                if (document.getElementById('modelo_montura')) document.getElementById('modelo_montura').value = o.montura.modelo || '';
+                if (document.getElementById('observaciones_montura')) document.getElementById('observaciones_montura').value = o.montura.observaciones || '';
+            }
+
+            // Payments
+            if (o.pagos) {
+                if (document.getElementById('total')) document.getElementById('total').value = o.pagos.total || '';
+                if (document.getElementById('adelanto')) document.getElementById('adelanto').value = o.pagos.adelanto || '';
+                if (document.getElementById('saldo')) document.getElementById('saldo').value = o.pagos.saldo || '';
+                if (document.getElementById('metodo_pago')) document.getElementById('metodo_pago').value = o.pagos.metodo_pago || 'efectivo';
+            }
+
+            // Graduation OD
+            if (o.graduacion && o.graduacion.lejos && o.graduacion.lejos.od) {
+                if (document.getElementById('od_esf')) document.getElementById('od_esf').value = o.graduacion.lejos.od.esf || '';
+                if (document.getElementById('od_cil')) document.getElementById('od_cil').value = o.graduacion.lejos.od.cil || '';
+                if (document.getElementById('od_eje')) document.getElementById('od_eje').value = o.graduacion.lejos.od.eje || '';
+            }
+
+            // Graduation OI
+            if (o.graduacion && o.graduacion.lejos && o.graduacion.lejos.oi) {
+                if (document.getElementById('oi_esf')) document.getElementById('oi_esf').value = o.graduacion.lejos.oi.esf || '';
+                if (document.getElementById('oi_cil')) document.getElementById('oi_cil').value = o.graduacion.lejos.oi.cil || '';
+                if (document.getElementById('oi_eje')) document.getElementById('oi_eje').value = o.graduacion.lejos.oi.eje || '';
+            }
+            
+            // DI / Adicion
+            if (o.graduacion && o.graduacion.lejos) {
+                if (document.getElementById('di')) document.getElementById('di').value = o.graduacion.lejos.di || '';
+            }
+            if (o.graduacion && o.graduacion.cerca) {
+                if (document.getElementById('adicion')) document.getElementById('adicion').value = o.graduacion.cerca.adicion || '';
+            }
+            
+            // Update action route for the form manually in the submit handler
+        }
+    }
+});
 
 // Search client by CI
 async function buscarCliente() {
@@ -89,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Validate and submit form
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('formNuevaOrden');
+    const form = document.getElementById('formEditarOrden') || document.getElementById('formNuevaOrden');
     
     if (form) {
         form.addEventListener('submit', async function(e) {
@@ -132,9 +208,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Preparar datos del formulario
             const formData = new FormData(this);
+            const ordenId = window.ORDEN_A_EDITAR ? (window.ORDEN_A_EDITAR.id_orden || window.ORDEN_A_EDITAR.id) : '';
             
+            if (!ordenId) {
+                alert('No se pudo determinar el ID de la orden.');
+                if (loading) loading.style.display = 'none';
+                return;
+            }
+
             try {
-                const response = await fetch('/ordenes/nueva', {
+                const response = await fetch(`/ordenes/${ordenId}/editar`, {
                     method: 'POST',
                     body: formData
                 });
@@ -142,16 +225,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const result = await response.json();
                 
                 if (result.success) {
-                    showNotification('Orden creada exitosamente', 'success');
-                    formModified = false;
+                    if (typeof showNotification === 'function') {
+                        showNotification('Orden actualizada exitosamente', 'success');
+                    } else {
+                        alert('Orden actualizada exitosamente');
+                    }
+                    if (typeof formModified !== 'undefined') formModified = false;
                     setTimeout(() => {
-                        window.location.href = `/ordenes/${result.orden_id}`;
+                        window.location.href = `/ordenes/${result.orden_id || ordenId}`;
                     }, 1000);
                 } else {
-                    alert('Error al crear la orden: ' + result.error);
+                    alert('Error al actualizar la orden: ' + result.error);
                 }
             } catch (error) {
-                alert('Error al crear la orden: ' + error.message);
+                alert('Error al actualizar la orden: ' + error.message);
             } finally {
                 if (loading) {
                     loading.style.display = 'none';

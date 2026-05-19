@@ -3,203 +3,237 @@
 {% block title %}{{ orden.id_orden }} - Detalle de Orden{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div class="header-content">
-        <div class="header-icon">
-            <i class="fas fa-file-invoice"></i>
-        </div>
-        <div class="header-text">
-            <h1>Orden {{ orden.id_orden }}</h1>
-            <p>{{ sucursal.nombre if sucursal else orden.id_sucursal }} - Correlativo #{{ orden.nro_correlativo }}</p>
-        </div>
-    </div>
-    <div class="header-actions">
-        <span class="badge badge-{{ orden.estado }} badge-large">
-            {{ orden.estado }}
-        </span>
-        <button onclick="window.print()" class="btn-secondary">
-            <i class="fas fa-print"></i>
-            Imprimir
-        </button>
-    </div>
-</div>
-
-<div class="orden-mosaic-grid print-compact-grid">
-    <!-- Cliente e Información Combinados -->
-    <div class="detail-card print-full-width">
-        <div class="card-header">
-            <h3>Cliente y Orden</h3>
-        </div>
-        <div class="detail-content">
-            <div class="detail-horizontal">
-                <div class="detail-column">
-                    <div class="detail-row">
-                        <span class="label">Nombre:</span>
-                        <span class="value">{{ cliente.nombre_completo if cliente else orden.id_cliente }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">CI:</span>
-                        <span class="value">{{ cliente.ci if cliente else 'N/A' }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Teléfono:</span>
-                        <span class="value">{{ cliente.telefono if cliente else 'N/A' }}</span>
-                    </div>
-                </div>
-                <div class="detail-column">
-                    <div class="detail-row">
-                        <span class="label">Creación:</span>
-                        <span class="value">{{ orden.fecha_creacion[:10] }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Entrega:</span>
-                        <span class="value">{{ orden.fecha_entrega }}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">Sucursal:</span>
-                        <span class="value">{{ sucursal.nombre if sucursal else orden.id_sucursal }}</span>
-                    </div>
-                </div>
+<div class="container mx-auto p-4 lg:p-8">
+    <!-- Header -->
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div class="flex items-center mb-4 lg:mb-0">
+            <div class="bg-primary-light text-white rounded-lg p-4 mr-4">
+                <i class="fas fa-file-invoice text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl lg:text-3xl font-bold text-white">Orden {{ orden.id_orden }}</h1>
+                <p class="text-gray-400">{{ sucursal.nombre if sucursal else orden.id_sucursal }} - Correlativo #{{ orden.nro_correlativo }}</p>
             </div>
         </div>
+        <div class="flex items-center justify-center lg:justify-end space-x-4">
+            <span class="badge badge-{{ orden.estado }} badge-large">
+                {{ orden.estado }}
+            </span>
+            <a href="{{ url_for('editar_orden', orden_id=orden.id_orden) }}" class="btn-primary">
+                <i class="fas fa-edit"></i>
+                <span class="hidden sm:inline">Editar</span>
+            </a>
+            <button onclick="window.print()" class="btn-secondary">
+                <i class="fas fa-print"></i>
+                <span class="hidden sm:inline">Imprimir</span>
+            </button>
+        </div>
     </div>
 
-    <!-- Graduación Combinada (OD y OI) -->
-    <div class="detail-card print-full-width">
-        <div class="card-header">
-            <h3>Graduación</h3>
-        </div>
-        <div class="detail-content">
-            <div class="graduacion-dual">
-                <div class="ojo-section">
-                    <h4 class="ojo-title">O.D.</h4>
-                    <div class="graduacion-grid">
-                        <div class="grad-item">
-                            <span class="grad-label">ESF</span>
-                            <span class="grad-value">{{ orden.graduacion.lejos.od.esf }}</span>
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Main Content (Cols 1 & 2) -->
+        <div class="lg:col-span-2 flex flex-col gap-8">
+            
+            <!-- Graduacion Card -->
+            <div class="detail-card p-6 lg:p-8">
+                <h3 class="text-xl font-bold text-white mb-6">Graduación</h3>
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+                        <!-- Ojo Derecho -->
+                        <div class="grad-section">
+                            <h4 class="font-semibold text-gray-300 mb-3 text-center md:text-left">Ojo Derecho (O.D.)</h4>
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div>
+                                    <p class="text-sm text-gray-400">ESF</p>
+                                    <p class="text-lg font-semibold text-white">{{ orden.graduacion.lejos.od.esf }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-400">CIL</p>
+                                    <p class="text-lg font-semibold text-white">{{ orden.graduacion.lejos.od.cil if orden.graduacion.lejos.od.cil else '-' }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-400">EJE</p>
+                                    <p class="text-lg font-semibold text-white">{{ orden.graduacion.lejos.od.eje if orden.graduacion.lejos.od.eje else '-' }}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="grad-item">
-                            <span class="grad-label">CIL</span>
-                            <span class="grad-value">{{ orden.graduacion.lejos.od.cil if orden.graduacion.lejos.od.cil else '-' }}</span>
-                        </div>
-                        <div class="grad-item">
-                            <span class="grad-label">EJE</span>
-                            <span class="grad-value">{{ orden.graduacion.lejos.od.eje if orden.graduacion.lejos.od.eje else '-' }}</span>
+                        <!-- Ojo Izquierdo -->
+                        <div class="grad-section">
+                            <h4 class="font-semibold text-gray-300 mb-3 text-center md:text-left">Ojo Izquierdo (O.I.)</h4>
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div>
+                                    <p class="text-sm text-gray-400">ESF</p>
+                                    <p class="text-lg font-semibold text-white">{{ orden.graduacion.lejos.oi.esf }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-400">CIL</p>
+                                    <p class="text-lg font-semibold text-white">{{ orden.graduacion.lejos.oi.cil if orden.graduacion.lejos.oi.cil else '-' }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-400">EJE</p>
+                                    <p class="text-lg font-semibold text-white">{{ orden.graduacion.lejos.oi.eje if orden.graduacion.lejos.oi.eje else '-' }}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="ojo-section">
-                    <h4 class="ojo-title">O.I.</h4>
-                    <div class="graduacion-grid">
-                        <div class="grad-item">
-                            <span class="grad-label">ESF</span>
-                            <span class="grad-value">{{ orden.graduacion.lejos.oi.esf }}</span>
+                    <div class="border-t border-gray-700 pt-4 flex justify-around">
+                        <div class="text-center">
+                            <p class="text-sm text-gray-400">Distancia Interpupilar (D.I.)</p>
+                            <p class="text-lg font-semibold text-white">{{ orden.graduacion.lejos.di }} mm</p>
                         </div>
-                        <div class="grad-item">
-                            <span class="grad-label">CIL</span>
-                            <span class="grad-value">{{ orden.graduacion.lejos.oi.cil if orden.graduacion.lejos.oi.cil else '-' }}</span>
+                        {% if orden.graduacion.cerca.adicion %}
+                        <div class="text-center">
+                            <p class="text-sm text-gray-400">Adición</p>
+                            <p class="text-lg font-semibold text-white">{{ orden.graduacion.cerca.adicion }}</p>
                         </div>
-                        <div class="grad-item">
-                            <span class="grad-label">EJE</span>
-                            <span class="grad-value">{{ orden.graduacion.lejos.oi.eje if orden.graduacion.lejos.oi.eje else '-' }}</span>
-                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
-            <div class="detail-row">
-                <span class="label">D.I.:</span>
-                <span class="value"><strong>{{ orden.graduacion.lejos.di }} mm</strong></span>
-            </div>
-            {% if orden.graduacion.cerca.adicion %}
-            <div class="detail-row">
-                <span class="label">Adición:</span>
-                <span class="value"><strong>{{ orden.graduacion.cerca.adicion }}</strong></span>
-            </div>
-            {% endif %}
-        </div>
-    </div>
 
-    <!-- Especificaciones -->
-    <div class="detail-card">
-        <div class="card-header">
-            <h3>Especificaciones</h3>
-        </div>
-        <div class="detail-content">
-            <div class="detail-row">
-                <span class="label">Tipo:</span>
-                <span class="value">{{ orden.especificaciones.tipo_lente }}</span>
+            <!-- Especificaciones y Montura Card -->
+            <div class="detail-card p-6 lg:p-8">
+                <h3 class="text-xl font-bold text-white mb-6">Especificaciones y Montura</h3>
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Tipo de Lente</dt>
+                        <dd class="text-white font-medium">{{ orden.especificaciones.tipo_lente }}</dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Material</dt>
+                        <dd class="text-white font-medium">{{ orden.especificaciones.material }}</dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Marca de Lente</dt>
+                        <dd class="text-white font-medium">{{ orden.especificaciones.marca_lente }}</dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Modelo de Montura</dt>
+                        <dd class="text-white font-medium">{{ orden.montura.modelo }}</dd>
+                    </div>
+                    <div class="md:col-span-2">
+                        <dt class="text-sm text-gray-400">Tratamientos</dt>
+                        <dd class="flex flex-wrap gap-2 mt-2">
+                            {% for tratamiento in orden.especificaciones.tratamientos %}
+                            <span class="badge badge-info">{{ tratamiento }}</span>
+                            {% else %}
+                            <span class="text-gray-500">Ninguno</span>
+                            {% endfor %}
+                        </dd>
+                    </div>
+                    {% if orden.montura.observaciones %}
+                    <div class="md:col-span-2">
+                        <dt class="text-sm text-gray-400">Observaciones de Montura</dt>
+                        <dd class="text-white font-medium">{{ orden.montura.observaciones }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
             </div>
-            <div class="detail-row">
-                <span class="label">Material:</span>
-                <span class="value">{{ orden.especificaciones.material }}</span>
-            </div>
-            <div class="detail-row">
-                <span class="label">Marca:</span>
-                <span class="value">{{ orden.especificaciones.marca_lente }}</span>
-            </div>
-            <div class="detail-row">
-                <span class="label">Tratamientos:</span>
-                <div class="badges-group">
-                    {% for tratamiento in orden.especificaciones.tratamientos %}
-                    <span class="badge badge-info">{{ tratamiento }}</span>
-                    {% endfor %}
+
+            <!-- Contenedor para Pago e Historial -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <!-- Informacion de Pago Card -->
+                <div class="detail-card p-6 lg:p-8 h-full">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-gray-700 rounded-lg p-3 mr-4">
+                            <i class="fas fa-dollar-sign text-xl text-green-400"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Información de Pago</h3>
+                    </div>
+                    <ul class="space-y-4">
+                        <li class="flex justify-between items-center text-lg">
+                            <span class="text-gray-300">Total:</span>
+                            <span class="font-bold text-white">Bs. {{ "%.2f"|format(orden.pagos.total) }}</span>
+                        </li>
+                        <li class="flex justify-between items-center text-base">
+                            <span class="text-gray-400">A Cuenta:</span>
+                            <span class="font-medium text-gray-300">Bs. {{ "%.2f"|format(orden.pagos.adelanto) }}</span>
+                        </li>
+                        <li class="flex justify-between items-center text-xl p-3 rounded-lg bg-yellow-500 bg-opacity-10">
+                            <span class="font-semibold text-yellow-400">Saldo:</span>
+                            <span class="font-bold text-yellow-300">Bs. {{ "%.2f"|format(orden.pagos.saldo) }}</span>
+                        </li>
+                    </ul>
+                    <div class="border-t border-gray-700 mt-6 pt-4">
+                        <p class="text-sm text-gray-400">Método de Pago del Adelanto: <span class="font-medium text-gray-300">{{ orden.pagos.metodo_pago }}</span></p>
+                    </div>
                 </div>
+
+                <!-- Historial de Cambios -->
+                {% if orden.historial %}
+                <div class="detail-card p-6 lg:p-8 h-full flex flex-col">
+                    <h3 class="text-xl font-bold text-white mb-6"><i class="fas fa-history mr-2"></i> Historial de Cambios</h3>
+                    <div class="relative border-l border-gray-700 ml-4 py-2 space-y-8 flex-grow overflow-y-auto" style="max-height: 300px;">
+                        {% for log in orden.historial|reverse %}
+                        <div class="mb-8 pl-8 relative">
+                            <span class="absolute -left-[17px] top-1 rounded-full bg-gray-800 border-4 border-gray-700 text-blue-400 w-8 h-8 flex items-center justify-center">
+                                <i class="fas fa-user-edit text-xs"></i>
+                            </span>
+                            <div class="bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-700">
+                                <div class="flex flex-col md:flex-row md:items-center justify-between mb-2">
+                                    <h4 class="text-md font-bold text-white">{{ log.nombre_usuario }}</h4>
+                                    <time class="text-xs text-gray-400 mt-1 md:mt-0 font-mono">{{ log.fecha[:10] }} {{ log.fecha[11:16] }}</time>
+                                </div>
+                                <ul class="list-disc pl-5 text-sm text-gray-300 space-y-1">
+                                    {% for cambio in log.cambios %}
+                                    <li>{{ cambio }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sidebar (Col 3) -->
+        <div class="lg:col-span-1 flex flex-col gap-8">
+            <div class="detail-card p-6 lg:p-8">
+                <h3 class="text-xl font-bold text-white mb-6">Cliente y Orden</h3>
+                <dl class="space-y-5">
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Nombre Cliente</dt>
+                        <dd class="text-white font-medium text-lg break-words">{{ cliente.nombre_completo if cliente else orden.id_cliente }}</dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">CI</dt>
+                        <dd class="text-white font-medium break-words">{{ cliente.ci if cliente else 'N/A' }}</dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Teléfono</dt>
+                        <dd class="text-white font-medium break-words">{{ cliente.telefono if cliente else 'N/A' }}</dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Fecha de Creación</dt>
+                        <dd class="text-white font-medium">{{ orden.fecha_creacion[:10] }}</dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Fecha de Entrega</dt>
+                        <dd class="text-white font-medium">{{ orden.fecha_entrega }}</dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Sucursal</dt>
+                        <dd class="text-white font-medium break-words">{{ sucursal.nombre if sucursal else orden.id_sucursal }}</dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Atendido por</dt>
+                        <dd class="text-white font-medium break-words">{{ orden.nombre_empleado if orden.nombre_empleado else 'N/A' }}</dd>
+                    </div>
+                </dl>
             </div>
         </div>
     </div>
 
-    <!-- Montura -->
-    <div class="detail-card">
-        <div class="card-header">
-            <h3>Montura{% if orden.montura.observaciones %} y Observaciones{% endif %}</h3>
-        </div>
-        <div class="detail-content">
-            <div class="detail-row">
-                <span class="label">Modelo:</span>
-                <span class="value">{{ orden.montura.modelo }}</span>
-            </div>
-            {% if orden.montura.observaciones %}
-            <div class="detail-row">
-                <span class="label">Obs:</span>
-                <span class="value">{{ orden.montura.observaciones }}</span>
-            </div>
-            {% endif %}
-        </div>
+    <!-- Footer Action -->
+    <div class="mt-8 text-center lg:text-left">
+        <a href="{{ url_for('ordenes') }}" class="btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Volver a Órdenes
+        </a>
     </div>
-
-    <!-- Pagos -->
-    <div class="detail-card payment-card card-highlight">
-        <div class="card-header">
-            <div class="card-icon">
-                <i class="fas fa-dollar-sign"></i>
-            </div>
-            <h3>Información de Pago</h3>
-        </div>
-        <div class="detail-content">
-            <div class="payment-row total">
-                <span class="label">TOTAL:</span>
-                <span class="value">Bs. {{ "%.2f"|format(orden.pagos.total) }}</span>
-            </div>
-            <div class="payment-row">
-                <span class="label">A CUENTA:</span>
-                <span class="value">Bs. {{ "%.2f"|format(orden.pagos.adelanto) }}</span>
-            </div>
-            <div class="payment-row saldo">
-                <span class="label">SALDO:</span>
-                <span class="value">Bs. {{ "%.2f"|format(orden.pagos.saldo) }}</span>
-            </div>
-            <div class="payment-row">
-                <span class="label">Método de Pago:</span>
-                <span class="value">{{ orden.pagos.metodo_pago }}</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="form-actions">
-    <a href="{{ url_for('ordenes') }}" class="btn-secondary">
-        <i class="fas fa-arrow-left"></i>
-        Volver a Órdenes
-    </a>
 </div>
 {% endblock %}
