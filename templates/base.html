@@ -556,6 +556,23 @@
 
             // Función para renderizar el usuario en el DOM
             function renderUserData(userData) {
+                const adminElements = [
+                    document.getElementById('controlLink'),
+                    document.getElementById('usuariosLink'),
+                    document.getElementById('createUserItem'),
+                    document.getElementById('manageUsersItem'),
+                    document.getElementById('sidebarControlLink'),
+                    document.getElementById('sidebarUsuariosLink'),
+                    document.getElementById('sidebarCreateUserItem'),
+                    document.getElementById('sidebarManageUsersItem')
+                ];
+
+                adminElements.forEach((element) => {
+                    if (element) {
+                        element.style.display = 'none';
+                    }
+                });
+
                 // Desktop
                 const userNameEl = document.getElementById('userName');
                 if (userNameEl) userNameEl.textContent = userData.nombre;
@@ -627,8 +644,14 @@
             const cachedUser = localStorage.getItem('optica_user_data');
             if (cachedUser) {
                 try {
-                    renderUserData(JSON.parse(cachedUser));
+                    const parsedUser = JSON.parse(cachedUser);
+                    if (!userData || !parsedUser || parsedUser.uid === userData.uid) {
+                        renderUserData(parsedUser);
+                    } else {
+                        localStorage.removeItem('optica_user_data');
+                    }
                 } catch (e) {
+                    localStorage.removeItem('optica_user_data');
                     console.error('Error parseando caché de usuario', e);
                 }
             }
@@ -641,6 +664,7 @@
                         const idToken = await user.getIdToken();
                         const resp = await fetch('/api/me', {
                             method: 'POST',
+                            credentials: 'include',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': 'Bearer ' + idToken
@@ -665,7 +689,15 @@
             });
 
             // Logout
-            const handleLogout = () => {
+            const handleLogout = async () => {
+                localStorage.removeItem('optica_user_data');
+
+                try {
+                    await fetch('/logout', { method: 'GET', credentials: 'include' });
+                } catch (error) {
+                    console.warn('No se pudo limpiar la sesión del servidor', error);
+                }
+
                 firebase.auth().signOut().then(() => {
                     window.location.href = '/login';
                 });

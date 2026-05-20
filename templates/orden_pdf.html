@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Orden de Trabajo - {{ orden.id_orden }}</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.5in;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 8.5in;
+        }
+        
+        /* ENCABEZADO */
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 0.3in;
+            margin-bottom: 0.2in;
+        }
+        
+        .header h1 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 0.05in;
+        }
+        
+        .header p {
+            font-size: 9pt;
+            margin: 0.02in 0;
+        }
+        
+        .doc-info {
+            width: 100%;
+            margin-bottom: 0.2in;
+            font-size: 9pt;
+        }
+        
+        .doc-info-line {
+            margin: 0.05in 0;
+        }
+        
+        .label {
+            font-weight: bold;
+            display: inline-block;
+            width: 1.2in;
+        }
+        
+        /* TABLAS GENERALES */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0.15in;
+            font-size: 9pt;
+        }
+        
+        th {
+            background-color: #f0f0f0;
+            border: 1px solid #999;
+            padding: 0.08in;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            border: 1px solid #ddd;
+            padding: 0.08in;
+            vertical-align: top;
+        }
+        
+        /* SECCIÓN DE TÍTULOS */
+        .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            background-color: #e8e8e8;
+            border: 1px solid #999;
+            padding: 0.08in;
+            margin-top: 0.15in;
+            margin-bottom: 0.08in;
+        }
+        
+        /* CLIENTE */
+        .cliente-block {
+            width: 100%;
+            margin-bottom: 0.15in;
+            font-size: 9pt;
+        }
+        
+        .cliente-item {
+            margin-bottom: 0.08in;
+        }
+        
+        /* GRADUACIÓN */
+        .grad-table {
+            width: 100%;
+            margin-bottom: 0.1in;
+        }
+        
+        .grad-table td {
+            padding: 0.06in;
+            text-align: center;
+            border: 1px solid #999;
+        }
+        
+        .grad-label {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        
+        /* ESPECIFICACIONES */
+        .spec-item {
+            margin-bottom: 0.08in;
+            line-height: 1.3;
+        }
+        
+        .spec-item strong {
+            display: inline-block;
+            width: 1.2in;
+        }
+        
+        .treatments-list {
+            margin-left: 1.3in;
+            padding-left: 0.1in;
+        }
+        
+        .treatments-list li {
+            margin-bottom: 0.03in;
+            list-style: none;
+        }
+        
+        /* HISTORIAL */
+        .history-table {
+            font-size: 8pt;
+            margin-top: 0.2in;
+        }
+        
+        .history-table th,
+        .history-table td {
+            padding: 0.05in;
+            border: 1px solid #ddd;
+        }
+        
+        /* FOOTER */
+        .footer {
+            margin-top: 0.3in;
+            border-top: 1px solid #999;
+            padding-top: 0.1in;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+        }
+        
+        /* PARA IMPRESIÓN */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- ENCABEZADO -->
+        <div class="header">
+            <h1>ÓPTICA CENTRAL</h1>
+            <p>Nota de Venta / Orden de Trabajo</p>
+        </div>
+        
+        <!-- INFO DEL DOCUMENTO -->
+        <div class="doc-info">
+            <div class="doc-info-line"><span class="label">Sucursal:</span> {{ sucursal.nombre if sucursal else 'N/A' }}</div>
+            <div class="doc-info-line"><span class="label">Correlativo:</span> {{ orden.nro_correlativo }}</div>
+            <div class="doc-info-line"><span class="label">Orden ID:</span> {{ orden.id_orden }}</div>
+            <div class="doc-info-line"><span class="label">Fecha:</span> {{ orden.fecha_creacion[:10] if orden.fecha_creacion else 'N/A' }}</div>
+            <div class="doc-info-line"><span class="label">Entrega:</span> {{ orden.fecha_entrega if orden.fecha_entrega else 'Por determinar' }}</div>
+        </div>
+        
+        <!-- CLIENTE -->
+        <div class="section-title">DATOS DEL CLIENTE</div>
+        <div class="cliente-block">
+            <div class="cliente-item"><strong>Nombre:</strong> {{ cliente.nombre_completo if cliente else 'N/A' }}</div>
+            <div class="cliente-item"><strong>C.I.:</strong> {{ cliente.ci if cliente else 'N/A' }}</div>
+            <div class="cliente-item"><strong>Teléfono:</strong> {{ cliente.telefono if cliente else 'N/A' }}</div>
+            <div class="cliente-item"><strong>Estado:</strong> {{ orden.estado }}</div>
+        </div>
+        
+        <!-- GRADUACIÓN -->
+        <div class="section-title">GRADUACIÓN</div>
+        <table class="grad-table">
+            <tr>
+                <td class="grad-label" style="width: 20%;">Ojo</td>
+                <td class="grad-label" style="width: 20%;">ESF</td>
+                <td class="grad-label" style="width: 20%;">CIL</td>
+                <td class="grad-label" style="width: 20%;">EJE</td>
+                <td class="grad-label" style="width: 20%;">ADD</td>
+            </tr>
+            <tr>
+                <td><strong>O.D.</strong></td>
+                <td>{{ orden.graduacion.lejos.od.esf }}</td>
+                <td>{{ orden.graduacion.lejos.od.cil or '-' }}</td>
+                <td>{{ orden.graduacion.lejos.od.eje or '-' }}</td>
+                <td>{{ orden.graduacion.cerca.adicion or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>O.I.</strong></td>
+                <td>{{ orden.graduacion.lejos.oi.esf }}</td>
+                <td>{{ orden.graduacion.lejos.oi.cil or '-' }}</td>
+                <td>{{ orden.graduacion.lejos.oi.eje or '-' }}</td>
+                <td>{{ orden.graduacion.cerca.adicion or '-' }}</td>
+            </tr>
+            <tr>
+                <td><strong>D.I.</strong></td>
+                <td colspan="4">{{ orden.graduacion.lejos.di or '-' }} mm</td>
+            </tr>
+        </table>
+        
+        <!-- ESPECIFICACIONES -->
+        <div class="section-title">ESPECIFICACIONES DE LENTES</div>
+        
+        <div class="spec-item">
+            <strong>Tipo:</strong> {{ orden.especificaciones.tipo_lente or 'N/A' }}
+        </div>
+        <div class="spec-item">
+            <strong>Material:</strong> {{ orden.especificaciones.material or 'N/A' }}
+        </div>
+        <div class="spec-item">
+            <strong>Marca:</strong> {{ orden.especificaciones.marca_lente or 'N/A' }}
+        </div>
+        
+        {% if orden.especificaciones.tratamientos and orden.especificaciones.tratamientos|length > 0 %}
+        <div class="spec-item">
+            <strong>Tratamientos:</strong>
+            <ul class="treatments-list">
+                {% for tratamiento in orden.especificaciones.tratamientos %}
+                <li>• {{ tratamiento }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <div class="section-title" style="margin-top: 0.15in;">MONTURA</div>
+        <div class="spec-item">
+            <strong>Modelo:</strong> {{ orden.montura.modelo or 'N/A' }}
+        </div>
+        {% if orden.montura.observaciones %}
+        <div class="spec-item">
+            <strong>Observaciones:</strong> {{ orden.montura.observaciones }}
+        </div>
+        {% endif %}
+        
+        <!-- PAGOS -->
+        <div class="section-title" style="margin-top: 0.2in;">RESUMEN DE PAGO</div>
+        <table style="width: 50%; margin-left: auto; margin-right: 0; font-size: 9pt;">
+            <tr>
+                <td style="text-align: left; padding: 0.08in; border: none;">Total a pagar:</td>
+                <td style="text-align: right; padding: 0.08in; border: none; font-weight: bold;">Bs. {{ "%.2f"|format(orden.pagos.total) }}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left; padding: 0.08in; border: none;">A cuenta:</td>
+                <td style="text-align: right; padding: 0.08in; border: none;">Bs. {{ "%.2f"|format(orden.pagos.adelanto) }}</td>
+            </tr>
+            <tr style="background-color: #fff3cd;">
+                <td style="text-align: left; padding: 0.08in; border-top: 1px solid #000; border-bottom: 2px solid #000; font-weight: bold;">Saldo pendiente:</td>
+                <td style="text-align: right; padding: 0.08in; border-top: 1px solid #000; border-bottom: 2px solid #000; font-weight: bold;">Bs. {{ "%.2f"|format(orden.pagos.saldo) }}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left; padding: 0.08in; border: none;">Método de pago:</td>
+                <td style="text-align: right; padding: 0.08in; border: none;">{{ orden.pagos.metodo_pago or 'N/A' }}</td>
+            </tr>
+        </table>
+        
+        <!-- HISTORIAL DE CAMBIOS -->
+        {% if orden.historial and orden.historial|length > 0 %}
+        <div class="section-title" style="margin-top: 0.25in;">HISTORIAL DE CAMBIOS</div>
+        <table class="history-table">
+            <tr>
+                <th style="width: 30%;">Fecha</th>
+                <th style="width: 25%;">Usuario</th>
+                <th style="width: 45%;">Cambios</th>
+            </tr>
+            {% for entrada in orden.historial[-5:] %}
+            <tr>
+                <td>{{ entrada.fecha[:10] if entrada.fecha else 'N/A' }}</td>
+                <td>{{ entrada.nombre_usuario or 'Sistema' }}</td>
+                <td>
+                    {% if entrada.cambios is string %}
+                        {{ entrada.cambios }}
+                    {% else %}
+                        {% for cambio in entrada.cambios %}
+                            {{ cambio }}{% if not loop.last %}<br/>{% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+        
+        <!-- FOOTER -->
+        <div class="footer">
+            <p>Documento generado automáticamente. Válido como comprobante de venta.</p>
+            <p>Para dudas o reclamos, comuníquese con la sucursal: {{ sucursal.nombre if sucursal else 'Óptica Central' }}</p>
+        </div>
+        
+    </div>
+</body>
+</html>

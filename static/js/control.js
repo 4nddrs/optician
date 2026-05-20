@@ -329,6 +329,7 @@ function renderFinanzas(orders) {
         },
         options: {
             responsive: true,
+            radius: '70%',
             maintainAspectRatio: false,
             cutout: '60%',
             plugins: {
@@ -438,14 +439,14 @@ function renderSucursalesEquipo(orders, sucursalesAll, usuarios) {
     const empleadosPorId = {};
 
     (usuarios || []).forEach(u => {
-        const empleadoKey = String(u?.uid || u?.id || u?.id_empleado || '');
+        const empleadoKey = String(u?.uid || '');
         if (empleadoKey) {
             empleadosPorId[empleadoKey] = u;
         }
     });
 
     orders.forEach(o => {
-        const eId = String(o.id_empleado || o.empleado_id || o.id_usuario || '');
+        const eId = String(o.id_empleado || '');
         if (!eId) return;
         if (!ventasPorEmpleado[eId]) ventasPorEmpleado[eId] = [];
 

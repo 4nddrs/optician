@@ -4,14 +4,32 @@ import firebase_config as fb
 import firebase_auth as fa
 import firebase_admin
 import os
+import logging
 from dotenv import load_dotenv
 from functools import wraps
 
 # Load environment variables
 load_dotenv()
 
+# Configurar logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'tu-clave-secreta-super-segura-cambiar-en-produccion')
+
+# Ensure local development session cookies are accepted by browsers
+app.config['SESSION_COOKIE_SAMESITE'] = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'False') in ['True', 'true', '1']
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 # Expose Firebase client config to Jinja templates from environment (.env)
 app.jinja_env.globals['FIREBASE_CONFIG'] = {
@@ -35,6 +53,20 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+def admin_required(f):
+    """Verificar que el usuario autenticado tenga rol de admin."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_role = session.get('user_role') or request.cookies.get('optica_user_role')
+        if (user_role or '').lower() != 'admin':
+            if request.path.startswith('/api/'):
+                return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+            return redirect('/')
+        return f(*args, **kwargs)
+
+    return decorated_function
+
 # ========================================
 # RUTAS DE AUTENTICACIÓN
 # ========================================
@@ -48,6 +80,7 @@ def login():
 @app.route('/logout')
 def logout():
     # El logout se maneja en el frontend con Firebase
+    session.clear()
     return redirect('/login')
 
 # Ruta de Perfil
@@ -58,12 +91,14 @@ def perfil():
 # Ruta de Alta de Empleado (solo admin)
 @app.route('/empleados/nueva', methods=['GET'])
 @login_required
+@admin_required
 def alta_empleado():
     return render_template('alta_empleado.html')
 
 # API: Crear Nuevo Empleado
 @app.route('/api/empleados/crear', methods=['POST'])
 @login_required
+@admin_required
 def crear_empleado():
     try:
         nombre = request.form.get('nombre')
@@ -94,12 +129,14 @@ def crear_empleado():
 # Ruta de Usuarios (listado)
 @app.route('/usuarios')
 @login_required
+@admin_required
 def usuarios():
     return render_template('usuarios.html')
 
 # API: Obtener todos los usuarios
 @app.route('/api/usuarios', methods=['GET'])
 @login_required
+@admin_required
 def obtener_usuarios():
     try:
         # Pagination and filters
@@ -173,6 +210,7 @@ def obtener_usuarios():
 # API: Actualizar Usuario
 @app.route('/api/usuarios/<uid>/actualizar', methods=['POST'])
 @login_required
+@admin_required
 def actualizar_usuario_endpoint(uid):
     try:
         datos = request.json
@@ -190,6 +228,7 @@ def actualizar_usuario_endpoint(uid):
 # API: Eliminar Usuario
 @app.route('/api/usuarios/<uid>/eliminar', methods=['POST', 'DELETE'])
 @login_required
+@admin_required
 def eliminar_usuario_endpoint(uid):
     try:
         resultado = fa.eliminar_usuario(uid)
@@ -203,6 +242,7 @@ def eliminar_usuario_endpoint(uid):
 # API: Obtener usuarios por sucursal
 @app.route('/api/usuarios/sucursal/<sucursal_id>', methods=['GET'])
 @login_required
+@admin_required
 def obtener_usuarios_sucursal(sucursal_id):
     try:
         usuarios = fa.obtener_usuarios_por_sucursal(sucursal_id)
@@ -281,8 +321,8 @@ def index():
         
         # Statistics
         total_ordenes = len(ordenes)
-        ordenes_pendientes = len([o for o in ordenes if o.get('estado') == 'pendiente'])
-        ordenes_entregadas = len([o for o in ordenes if o.get('estado') == 'entregado'])
+        ordenes_pendientes = len([o for o in ordenes if o.get('estado') == 'Pendiente'])
+        ordenes_entregadas = len([o for o in ordenes if o.get('estado') == 'Entregado'])
         
         return render_template('index.html', 
                              ordenes=ordenes[:10],  # Últimas 10 órdenes
@@ -297,12 +337,14 @@ def index():
 # Control / Panel de Administración
 @app.route('/control')
 @login_required
+@admin_required
 def control():
     """Vista del dashboard gerencial / control"""
     return render_template('control.html')
 
 @app.route('/api/control/datos', methods=['GET'])
 @login_required
+@admin_required
 def api_control_datos():
     try:
         ordenes = fb.get_all_orders()
@@ -499,6 +541,35 @@ def ver_orden(orden_id):
     except Exception as e:
         return render_template('error.html', error=str(e))
 
+@app.route('/ordenes/<orden_id>/descargar-pdf', methods=['GET'])
+@login_required
+def descargar_pdf_orden(orden_id):
+    """
+    Descarga la orden como PDF.
+    Endpoint: GET /ordenes/{orden_id}/descargar-pdf
+    """
+    try:
+        from pdf_generator import generar_pdf_orden, enviar_pdf_respuesta
+        
+        # Obtener los datos de la orden
+        orden = fb.get_order_by_id(orden_id)
+        if not orden:
+            return jsonify({'success': False, 'error': 'Orden no encontrada'}), 404
+        
+        # Obtener cliente y sucursal
+        cliente = fb.get_client_by_id(orden.get('id_cliente'))
+        sucursal = fb.get_branch_by_id(orden.get('id_sucursal'))
+        
+        # Generar PDF
+        pdf_buffer, filename = generar_pdf_orden(orden, cliente, sucursal)
+        
+        # Retornar respuesta con el PDF
+        return enviar_pdf_respuesta(app, pdf_buffer, filename)
+        
+    except Exception as e:
+        logger.error(f"Error descargando PDF: {str(e)}")
+        return jsonify({'success': False, 'error': f'Error al generar PDF: {str(e)}'}), 500
+
 @app.route('/ordenes/<orden_id>/editar', methods=['GET', 'POST'])
 def editar_orden(orden_id):
     import json
@@ -521,12 +592,13 @@ def editar_orden(orden_id):
             
         elif request.method == 'POST':
             data = request.form.to_dict()
+            editor_uid = data.get('id_empleado')
             
             # Extracción y estructuración igual que nueva_orden
             new_order_data = {
                 'id_sucursal': data.get('id_sucursal'),
                 'fecha_entrega': data.get('fecha_entrega'),
-                'id_empleado': data.get('id_empleado'), # Capturamos quién editó si es provisto
+                'id_empleado': orden.get('id_empleado') or data.get('id_empleado'),
                 
                 'graduacion': {
                     'lejos': {
@@ -595,7 +667,7 @@ def editar_orden(orden_id):
                 
             nuevo_log = {
                 'fecha': datetime.now().isoformat(),
-                'id_usuario': data.get('id_empleado', 'Desconocido'),
+                'id_usuario': editor_uid or 'Desconocido',
                 'nombre_usuario': data.get('nombre_empleado', 'Desconocido'),
                 'cambios': cambios
             }
@@ -660,24 +732,33 @@ def api_me():
     Se acepta el token en la cabecera `Authorization: Bearer <token>` o en el body JSON `{ "idToken": "..." }`.
     """
     try:
+        logger.info('API /api/me called')
         # Obtener token
         token = None
         auth_header = request.headers.get('Authorization')
         if auth_header and auth_header.startswith('Bearer '):
             token = auth_header.split(' ', 1)[1]
+        logger.info(f'Authorization header present: {bool(auth_header)}')
         if not token:
             data = request.get_json(silent=True) or {}
             token = data.get('idToken')
+        logger.info(f'Token present in body: {bool(token and not auth_header)}')
 
         if not token:
             return jsonify({'success': False, 'error': 'No ID token provided'}), 401
 
         # Verificar token con Admin SDK
-        decoded = firebase_admin.auth.verify_id_token(token)
-        uid = decoded.get('uid')
+        try:
+            decoded = firebase_admin.auth.verify_id_token(token)
+            uid = decoded.get('uid')
+            logger.info(f'Decoded token uid={uid}')
+        except Exception as verify_err:
+            logger.exception('Token verification failed')
+            return jsonify({'success': False, 'error': 'Invalid token'}), 401
 
         # Obtener perfil desde firebase_auth helper (usa Admin SDK)
         perfil = fa.obtener_usuario_por_uid(uid)
+        logger.info(f'Perfil lookup for uid={uid} returned: {bool(perfil)}')
         if perfil:
             # Convertir valores no serializables (datetime) a ISO strings
             perfil_safe = {}
@@ -692,7 +773,21 @@ def api_me():
                 except Exception:
                     perfil_safe[k] = v
 
-            return jsonify({'success': True, 'usuario': perfil_safe, 'uid': uid})
+            # Populate server session
+            session['user_uid'] = uid
+            session['user_role'] = (perfil_safe.get('rol') or '').lower()
+            session['user_name'] = perfil_safe.get('nombre')
+            logger.info(f"Session populated for uid={uid} role={session.get('user_role')}")
+            logger.info(f"Session keys now: {list(session.keys())}")
+
+            # Build response and set a readable cookie with the role so browser navigations include it
+            from flask import make_response
+            resp = make_response(jsonify({'success': True, 'usuario': perfil_safe, 'uid': uid}))
+            samesite = app.config.get('SESSION_COOKIE_SAMESITE', 'Lax')
+            secure = app.config.get('SESSION_COOKIE_SECURE', False)
+            # Cookie is not HttpOnly so client navigations send it and server can read as fallback
+            resp.set_cookie('optica_user_role', session['user_role'] or '', samesite=samesite, secure=secure, httponly=False)
+            return resp
         else:
             return jsonify({'success': False, 'error': 'Perfil no encontrado', 'uid': uid}), 404
 

@@ -152,6 +152,7 @@ async function getUserProfile(uid) {
             const idToken = await firebase.auth().currentUser.getIdToken();
             const resp = await fetch('/api/me', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + idToken
@@ -191,6 +192,13 @@ async function loginWithEmail(email, password) {
         }
 
         const result = await firebase.auth().signInWithEmailAndPassword(email, password);
+
+        try {
+            // Sincronizar el perfil con el servidor antes de permitir navegación a vistas protegidas.
+            userProfile = await getUserProfile(result.user.uid);
+        } catch (profileErr) {
+            console.warn('⚠️ No se pudo sincronizar el perfil en login:', profileErr);
+        }
         
         console.log('✅ Login exitoso:', result.user.uid);
         return { success: true, user: result.user };
@@ -269,6 +277,12 @@ async function logoutUser() {
         // Bypass the unload confirmation before signing out
         if (typeof bypassUnloadConfirmation === 'function') {
             bypassUnloadConfirmation();
+        }
+
+        try {
+            await fetch('/logout', { method: 'GET', credentials: 'include' });
+        } catch (logoutErr) {
+            console.warn('⚠️ No se pudo limpiar la sesión del servidor:', logoutErr);
         }
 
         await firebase.auth().signOut();
