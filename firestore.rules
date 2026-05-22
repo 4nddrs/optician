@@ -35,7 +35,7 @@ service cloud.firestore {
       // Creación: Solo un usuario con rol 'admin' puede crear usuarios
       allow create: if isAuthenticated() && isAdmin() &&
                        request.resource.data.rol in ['admin', 'empleado'] &&
-                       request.resource.data.sucursal_id in ['1', '2', '3', '4'] &&
+                       request.resource.data.sucursal_id in ['S1', 'S2', 'S3', 'S4'] &&
                        request.resource.data.keys().hasAll(['nombre', 'email', 'rol', 'sucursal_id']);
       
       // Actualización: 

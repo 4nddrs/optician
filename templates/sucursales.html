@@ -2,6 +2,128 @@
 
 {% block title %}Sucursales - Óptica{% endblock %}
 
+{% block extra_css %}
+<style>
+.sucursales-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.sucursal-card {
+    position: relative;
+}
+
+.sucursal-card .card-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.sucursal-card .btn-small {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.sucursal-location-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: var(--border-radius-small);
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.sucursal-location-btn:hover {
+    border-color: var(--color-primary-light);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.branch-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.76);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.branch-modal .modal-panel {
+    width: 100%;
+    max-width: 640px;
+    background: var(--surface-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+}
+
+.branch-modal .modal-header,
+.branch-modal .modal-footer {
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.branch-modal .modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.branch-modal .modal-body {
+    padding: 1.25rem;
+}
+
+.branch-modal .modal-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.branch-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.branch-modal .modal-close {
+    background: transparent;
+    border: 0;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 640px) {
+    .sucursales-toolbar {
+        align-items: stretch;
+    }
+
+    .sucursales-toolbar .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .branch-modal .modal-header,
+    .branch-modal .modal-footer {
+        padding: 0.9rem 1rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div class="header-content">
@@ -13,11 +135,18 @@
             <p>Información de sucursales</p>
         </div>
     </div>
+    <div class="sucursales-toolbar">
+        <div></div>
+        <button type="button" class="btn-primary" id="openCreateBranchModal">
+            <i class="fas fa-plus"></i>
+            Crear Sucursal
+        </button>
+    </div>
 </div>
 
 <div class="sucursales-grid">
     {% for sucursal in sucursales %}
-    <div class="sucursal-card">
+    <div class="sucursal-card" data-id="{{ sucursal.id }}" data-nombre="{{ sucursal.nombre|e }}" data-direccion="{{ sucursal.direccion|e }}" data-ubicacion="{{ (sucursal.ubicacion or '')|e }}">
         <div class="sucursal-header">
             <div class="sucursal-icon">
                 <i class="fas fa-building"></i>
@@ -32,6 +161,23 @@
                 <i class="fas fa-map-marker-alt"></i>
                 <span>{{ sucursal.direccion }}</span>
             </div>
+            <div class="info-row">
+             
+                {% if sucursal.ubicacion %}
+                <a href="{{ sucursal.ubicacion }}" target="_blank" rel="noopener noreferrer" class="sucursal-location-btn">
+                    <i class="fas fa-map-location-dot"></i>
+                    Ubicación
+                </a>
+                {% else %}
+                <span>Ubicación no registrada</span>
+                {% endif %}
+            </div>
+            <div class="card-actions">
+                <button type="button" class="btn-small btn-primary open-edit-branch-modal">
+                    <i class="fas fa-pen"></i>
+                    Editar
+                </button>
+            </div>
         </div>
     </div>
     {% else %}
@@ -41,4 +187,147 @@
     </div>
     {% endfor %}
 </div>
+
+<div id="branchModal" class="branch-modal" aria-hidden="true">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="branchModalTitle">
+        <div class="modal-header">
+            <h3 id="branchModalTitle"><i class="fas fa-building"></i> <span id="branchModalTitleText">Crear Sucursal</span></h3>
+            <button type="button" class="modal-close" id="closeBranchModal" aria-label="Cerrar modal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="branchForm">
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="form-group">
+                        <label for="branchId"><i class="fas fa-hashtag"></i> ID Sucursal: *</label>
+                        <input type="text" id="branchId" name="id" class="form-input" placeholder="Ej: S5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="branchName"><i class="fas fa-building"></i> Nombre: *</label>
+                        <input type="text" id="branchName" name="nombre" class="form-input" placeholder="Sucursal Centro" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="branchAddress"><i class="fas fa-map-marker-alt"></i> Dirección: *</label>
+                        <input type="text" id="branchAddress" name="direccion" class="form-input" placeholder="Av. Principal 123" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="branchLocation"><i class="fas fa-map-location-dot"></i> Ubicación (Google Maps):</label>
+                        <input type="url" id="branchLocation" name="ubicacion" class="form-input" placeholder="https://maps.google.com/...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancelBranchModal">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="saveBranchBtn">
+                        <i class="fas fa-save"></i>
+                        Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const branchModal = document.getElementById('branchModal');
+const branchForm = document.getElementById('branchForm');
+const branchModalTitleText = document.getElementById('branchModalTitleText');
+const branchIdInput = document.getElementById('branchId');
+const branchNameInput = document.getElementById('branchName');
+const branchAddressInput = document.getElementById('branchAddress');
+const branchLocationInput = document.getElementById('branchLocation');
+const saveBranchBtn = document.getElementById('saveBranchBtn');
+
+let branchMode = 'create';
+let branchEditId = null;
+
+function openBranchModal(mode = 'create', data = null) {
+    branchMode = mode;
+    branchEditId = data?.id || null;
+    branchModalTitleText.textContent = mode === 'edit' ? 'Editar Sucursal' : 'Crear Sucursal';
+    branchIdInput.disabled = mode === 'edit';
+    branchIdInput.value = data?.id || '';
+    branchNameInput.value = data?.nombre || '';
+    branchAddressInput.value = data?.direccion || '';
+    branchLocationInput.value = data?.ubicacion || '';
+    branchIdInput.required = mode === 'create';
+    branchModal.style.display = 'flex';
+    branchModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeBranchModal() {
+    branchModal.style.display = 'none';
+    branchModal.setAttribute('aria-hidden', 'true');
+    branchForm.reset();
+    branchIdInput.disabled = false;
+    branchMode = 'create';
+    branchEditId = null;
+}
+
+document.getElementById('openCreateBranchModal').addEventListener('click', () => openBranchModal('create'));
+document.getElementById('closeBranchModal').addEventListener('click', closeBranchModal);
+document.getElementById('cancelBranchModal').addEventListener('click', closeBranchModal);
+
+branchModal.addEventListener('click', function(e) {
+    if (e.target === branchModal) {
+        closeBranchModal();
+    }
+});
+
+document.querySelectorAll('.open-edit-branch-modal').forEach(button => {
+    button.addEventListener('click', function() {
+        const card = this.closest('.sucursal-card');
+        openBranchModal('edit', {
+            id: card.dataset.id,
+            nombre: card.dataset.nombre,
+            direccion: card.dataset.direccion,
+            ubicacion: card.dataset.ubicacion
+        });
+    });
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && branchModal.style.display === 'flex') {
+        closeBranchModal();
+    }
+});
+
+branchForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const originalHtml = saveBranchBtn.innerHTML;
+    saveBranchBtn.disabled = true;
+    saveBranchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+    const formData = new FormData(this);
+    const url = branchMode === 'edit'
+        ? `/sucursales/${encodeURIComponent(branchEditId)}/editar`
+        : '/sucursales/crear';
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            window.location.reload();
+            return;
+        }
+
+        alert('Error: ' + (result.error || 'No se pudo guardar la sucursal'));
+    } catch (error) {
+        alert('Error al guardar la sucursal: ' + error.message);
+    } finally {
+        saveBranchBtn.disabled = false;
+        saveBranchBtn.innerHTML = originalHtml;
+    }
+});
+</script>
 {% endblock %}

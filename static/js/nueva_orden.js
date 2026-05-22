@@ -1,11 +1,125 @@
 // Functions for new order page
 console.log('nueva_orden.js loaded successfully');
 
+let clientSearchDebounce = null;
+let clientSuggestions = [];
+
+function clearClientSelection(options = {}) {
+    const keepQuery = options.keepQuery || false;
+    document.getElementById('id_cliente').value = '';
+    document.getElementById('ci_cliente').value = '';
+    document.getElementById('nombre_cliente').value = '';
+    document.getElementById('telefono_cliente').value = '';
+
+    if (!keepQuery) {
+        const inputCI = document.getElementById('buscarCliente');
+        if (inputCI) {
+            inputCI.value = '';
+        }
+    }
+}
+
+function renderClientSuggestions(clientes) {
+    const container = document.getElementById('clientSuggestions');
+    if (!container) return;
+
+    clientSuggestions = Array.isArray(clientes) ? clientes : [];
+
+    if (!clientSuggestions.length) {
+        container.innerHTML = '';
+        container.style.display = 'none';
+        return;
+    }
+
+    container.innerHTML = clientSuggestions.map((cliente, index) => {
+        const nombre = cliente.nombre_completo || 'Sin nombre';
+        const ci = cliente.ci || '';
+        const telefono = cliente.telefono || 'Sin teléfono';
+
+        return `
+            <button type="button" class="client-suggestion-item" data-index="${index}">
+                <span>
+                    <span class="client-suggestion-name">${nombre}</span><br>
+                    <span class="client-suggestion-meta">CI: ${ci}</span>
+                </span>
+                <span class="client-suggestion-meta">${telefono}</span>
+            </button>
+        `;
+    }).join('');
+
+    container.style.display = 'block';
+
+    container.querySelectorAll('.client-suggestion-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const selected = clientSuggestions[Number(this.dataset.index)];
+            if (selected) {
+                fillClientFields(selected, true);
+            }
+        });
+    });
+}
+
+function hideClientSuggestions() {
+    const container = document.getElementById('clientSuggestions');
+    if (!container) return;
+    container.innerHTML = '';
+    container.style.display = 'none';
+}
+
+function fillClientFields(cliente, keepQuery = false) {
+    if (!cliente) return;
+
+    document.getElementById('id_cliente').value = cliente.id || '';
+    document.getElementById('ci_cliente').value = cliente.ci || '';
+    document.getElementById('nombre_cliente').value = cliente.nombre_completo || '';
+    document.getElementById('telefono_cliente').value = cliente.telefono || '';
+
+    const inputCI = document.getElementById('buscarCliente');
+    if (inputCI && !keepQuery) {
+        inputCI.value = cliente.ci || '';
+    }
+
+    hideClientSuggestions();
+}
+
+async function buscarClientesEnVivo(query) {
+    const value = (query || '').trim();
+    if (!value) {
+        hideClientSuggestions();
+        clearClientSelection({ keepQuery: true });
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/clientes/buscar?q=${encodeURIComponent(value)}`);
+        const result = await response.json();
+
+        if (result.success) {
+            if (result.cliente) {
+                fillClientFields(result.cliente, false);
+            }
+
+            if (result.clientes && result.clientes.length > 1) {
+                renderClientSuggestions(result.clientes);
+            } else if (result.clientes && result.clientes.length === 1 && !result.cliente) {
+                renderClientSuggestions(result.clientes);
+            } else if (!result.cliente) {
+                hideClientSuggestions();
+            }
+        } else {
+            hideClientSuggestions();
+            clearClientSelection({ keepQuery: true });
+        }
+    } catch (error) {
+        console.error('Error al buscar clientes:', error);
+    }
+}
+
 // Search client by CI
 async function buscarCliente() {
     console.log('buscarCliente function called');
     const inputCI = document.getElementById('buscarCliente');
-    const btnBuscar = document.querySelector('button[onclick*="buscarCliente"]');
+    const btnBuscar = document.getElementById('btnBuscarCliente');
     const ci = inputCI.value.trim();
     
     if (!ci) {
@@ -31,9 +145,7 @@ async function buscarCliente() {
         
         if (result.success && result.cliente) {
             // Fill fields with client data
-            document.getElementById('id_cliente').value = result.cliente.id;
-            document.getElementById('nombre_cliente').value = result.cliente.nombre_completo;
-            document.getElementById('telefono_cliente').value = result.cliente.telefono;
+            fillClientFields(result.cliente, false);
             
             // Show success notification
             if (typeof showNotification === 'function') {
@@ -43,16 +155,13 @@ async function buscarCliente() {
             }
         } else {
             alert('Cliente no encontrado. Por favor registre el cliente primero.');
-            document.getElementById('id_cliente').value = '';
-            document.getElementById('nombre_cliente').value = '';
-            document.getElementById('telefono_cliente').value = '';
+            clearClientSelection({ keepQuery: true });
             inputCI.focus();
         }
     } catch (error) {
         console.error('Error al buscar cliente:', error);
         alert('Error al buscar el cliente. Por favor intente nuevamente.');
-        document.getElementById('id_cliente').value = '';
-        document.getElementById('nombre_cliente').value = '';
+        clearClientSelection({ keepQuery: true });
     } finally {
         // Restore button and input
         if (btnBuscar) {
@@ -242,6 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', function() {
     const buscarInput = document.getElementById('buscarCliente');
     const btnBuscar = document.getElementById('btnBuscarCliente');
+    const suggestions = document.getElementById('clientSuggestions');
     
     // Add click event to button
     if (btnBuscar) {
@@ -251,6 +361,40 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    if (buscarInput) {
+        buscarInput.addEventListener('input', function() {
+            clearTimeout(clientSearchDebounce);
+            const query = this.value;
+
+            if (!query.trim()) {
+                hideClientSuggestions();
+                clearClientSelection({ keepQuery: true });
+                return;
+            }
+
+            clientSearchDebounce = setTimeout(() => {
+                buscarClientesEnVivo(query);
+            }, 250);
+        });
+
+        buscarInput.addEventListener('focus', function() {
+            if (clientSuggestions.length > 0) {
+                const container = document.getElementById('clientSuggestions');
+                if (container) {
+                    container.style.display = 'block';
+                }
+            }
+        });
+    }
+
+    if (suggestions) {
+        document.addEventListener('click', function(e) {
+            if (!suggestions.contains(e.target) && e.target !== buscarInput) {
+                hideClientSuggestions();
+            }
+        });
+    }
+
     // Add Enter key support
     if (buscarInput) {
         buscarInput.addEventListener('keypress', function(e) {

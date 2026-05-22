@@ -2,6 +2,93 @@
 
 {% block title %}Nueva Orden - Óptica{% endblock %}
 
+{% block extra_css %}
+<style>
+.client-search-group {
+    position: relative;
+}
+
+.client-search-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.client-search-row .search-input-wrap {
+    flex: 1;
+    position: relative;
+}
+
+.client-search-row .search-input-wrap .form-input {
+    min-width: 320px;
+}
+
+.client-search-row .search-input-wrap .form-input {
+    width: 100%;
+}
+
+.client-suggestions {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 0.35rem);
+    background: var(--surface-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    box-shadow: var(--shadow-lg);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 30;
+}
+
+.client-suggestion-item {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+}
+
+.client-suggestion-item:last-child {
+    border-bottom: 0;
+}
+
+.client-suggestion-item:hover,
+.client-suggestion-item:focus {
+    background: var(--surface-secondary);
+}
+
+.client-suggestion-name {
+    font-weight: 600;
+}
+
+.client-suggestion-meta {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .client-search-row {
+        flex-direction: column;
+    }
+
+    .client-search-row .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div class="header-content">
@@ -29,9 +116,12 @@
         </div>
         <div class="form-grid">
             <div class="form-group full-width">
-                <label for="buscarCliente"><i class="fas fa-search"></i> Buscar Cliente por CI:</label>
-                <div class="input-group">
-                    <input type="text" id="buscarCliente" class="form-input" placeholder="Ingrese CI del cliente">
+                <label for="buscarCliente"><i class="fas fa-search"></i> Buscar Cliente por CI o Nombre:</label>
+                <div class="client-search-row">
+                    <div class="search-input-wrap">
+                        <input type="text" id="buscarCliente" class="form-input" placeholder="Escriba CI o nombre del cliente" autocomplete="off">
+                        <div id="clientSuggestions" class="client-suggestions" aria-label="Sugerencias de clientes"></div>
+                    </div>
                     <button type="button" id="btnBuscarCliente" class="btn-secondary">
                         <i class="fas fa-search"></i>
                         Buscar
@@ -39,6 +129,11 @@
                 </div>
             </div>
             
+            <div class="form-group">
+                <label for="ci_cliente">CI:</label>
+                <input type="text" id="ci_cliente" class="form-input" readonly>
+            </div>
+
             <div class="form-group">
                 <label for="nombre_cliente">Nombre: *</label>
                 <input type="text" id="nombre_cliente" class="form-input" readonly required>
@@ -161,17 +256,17 @@
         <div class="form-grid">
             <div class="form-group">
                 <label for="od_esf">Esfera (ESF): *</label>
-                <input type="number" id="od_esf" name="od_esf" class="form-input" step="0.25" placeholder="0.00" required>
+                <input type="number" id="od_esf" name="od_esf" class="form-input" step="0.25" placeholder="-20.00 a +20.00" required>
             </div>
             
             <div class="form-group">
                 <label for="od_cil">Cilindro (CIL):</label>
-                <input type="number" id="od_cil" name="od_cil" class="form-input" step="0.25" placeholder="0.00">
+                <input type="number" id="od_cil" name="od_cil" class="form-input" step="0.25" placeholder="-10.00 a 0.00">
             </div>
             
             <div class="form-group">
                 <label for="od_eje">Eje:</label>
-                <input type="number" id="od_eje" name="od_eje" class="form-input" min="0" max="180" placeholder="0-180">
+                <input type="number" id="od_eje" name="od_eje" class="form-input" min="0" max="180" placeholder="0 a 180">
             </div>
         </div>
     </div>
@@ -187,17 +282,17 @@
         <div class="form-grid">
             <div class="form-group">
                 <label for="oi_esf">Esfera (ESF): *</label>
-                <input type="number" id="oi_esf" name="oi_esf" class="form-input" step="0.25" placeholder="0.00" required>
+                <input type="number" id="oi_esf" name="oi_esf" class="form-input" step="0.25" placeholder="-20.00 a +20.00" required>
             </div>
             
             <div class="form-group">
                 <label for="oi_cil">Cilindro (CIL):</label>
-                <input type="number" id="oi_cil" name="oi_cil" class="form-input" step="0.25" placeholder="0.00">
+                <input type="number" id="oi_cil" name="oi_cil" class="form-input" step="0.25" placeholder="-10.00 a 0.00">
             </div>
             
             <div class="form-group">
                 <label for="oi_eje">Eje:</label>
-                <input type="number" id="oi_eje" name="oi_eje" class="form-input" min="0" max="180" placeholder="0-180">
+                <input type="number" id="oi_eje" name="oi_eje" class="form-input" min="0" max="180" placeholder="0 a 180">
             </div>
         </div>
     </div>
@@ -213,12 +308,12 @@
         <div class="form-grid">
             <div class="form-group">
                 <label for="di">Distancia Interpupilar (DI): *</label>
-                <input type="number" id="di" name="di" class="form-input" min="40" max="80" placeholder="62" required>
+                <input type="number" id="di" name="di" class="form-input" min="40" max="80" placeholder="40 a 80" required>
             </div>
             
             <div class="form-group">
                 <label for="adicion">Adición (Cerca):</label>
-                <input type="number" id="adicion" name="adicion" class="form-input" step="0.25" placeholder="0.00">
+                <input type="number" id="adicion" name="adicion" class="form-input" step="0.25" placeholder="0.00 a 4.00">
             </div>
         </div>
     </div>

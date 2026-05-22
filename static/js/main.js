@@ -8,6 +8,65 @@ if ('serviceWorker' in navigator) {
 }
 
 // General utilities
+let appAlertCallback = null;
+
+function showAppAlert(message, options = {}) {
+    const modal = document.getElementById('appAlertModal');
+    const backdrop = document.getElementById('modalBackdrop');
+    const messageEl = document.getElementById('appAlertMessage');
+    const titleEl = document.querySelector('#appAlertTitle span');
+    const iconEl = document.querySelector('#appAlertTitle i');
+    const okBtn = document.getElementById('appAlertOkBtn');
+
+    if (!modal || !messageEl || !okBtn) {
+        if (typeof window.__nativeAlert === 'function') {
+            window.__nativeAlert(String(message));
+        }
+        return;
+    }
+
+    const title = options.title || 'Mensaje';
+    const iconClass = options.iconClass || 'fas fa-circle-info';
+
+    titleEl.textContent = title;
+    iconEl.className = iconClass;
+    messageEl.textContent = String(message ?? '');
+
+    appAlertCallback = typeof options.onClose === 'function' ? options.onClose : null;
+
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    if (backdrop) backdrop.classList.add('show');
+    document.body.style.overflow = 'hidden';
+
+    okBtn.focus();
+}
+
+function hideAppAlert() {
+    const modal = document.getElementById('appAlertModal');
+    const backdrop = document.getElementById('modalBackdrop');
+
+    if (modal) {
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+    if (backdrop) backdrop.classList.remove('show');
+    document.body.style.overflow = 'auto';
+
+    if (appAlertCallback) {
+        const callback = appAlertCallback;
+        appAlertCallback = null;
+        callback();
+    }
+}
+
+if (typeof window.__nativeAlert !== 'function') {
+    window.__nativeAlert = window.alert.bind(window);
+}
+window.alert = function(message) {
+    showAppAlert(message);
+};
+
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
     const backdrop = document.getElementById('modalBackdrop');
@@ -32,6 +91,21 @@ function closeModal(modalId) {
 
 // Cerrar modales al hacer clic en el backdrop
 document.addEventListener('DOMContentLoaded', function() {
+    const appAlertModal = document.getElementById('appAlertModal');
+    const appAlertOkBtn = document.getElementById('appAlertOkBtn');
+
+    if (appAlertOkBtn) {
+        appAlertOkBtn.addEventListener('click', hideAppAlert);
+    }
+
+    if (appAlertModal) {
+        appAlertModal.addEventListener('click', function(e) {
+            if (e.target === appAlertModal) {
+                hideAppAlert();
+            }
+        });
+    }
+
     const backdrop = document.getElementById('modalBackdrop');
     if (backdrop) {
         backdrop.addEventListener('click', function() {
@@ -39,6 +113,12 @@ document.addEventListener('DOMContentLoaded', function() {
             modales.forEach(modal => {
                 modal.classList.remove('show');
             });
+
+            if (appAlertModal && appAlertModal.classList.contains('show')) {
+                hideAppAlert();
+                return;
+            }
+
             backdrop.classList.remove('show');
             document.body.style.overflow = 'auto';
         });
@@ -50,7 +130,7 @@ function ensureBackdropState() {
     const backdrop = document.getElementById('modalBackdrop');
     if (!backdrop) return;
     // Consider modals shown either by .show class or by inline display style
-    const anyModalShownByClass = document.querySelectorAll('.modal.show, .modal-backdrop.show').length > 0;
+    const anyModalShownByClass = document.querySelectorAll('.modal.show, .modal-backdrop.show, .app-alert-modal.show').length > 0;
     const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
     const anyBackdropVisibleByStyle = backdrops.some(b => {
         const cs = window.getComputedStyle(b);
@@ -79,6 +159,12 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         const modales = document.querySelectorAll('.modal.show');
         const backdrop = document.getElementById('modalBackdrop');
+        const appAlertModal = document.getElementById('appAlertModal');
+
+        if (appAlertModal && appAlertModal.classList.contains('show')) {
+            hideAppAlert();
+            return;
+        }
         
         if (modales.length > 0 && backdrop) {
             modales.forEach(modal => {

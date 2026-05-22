@@ -21,7 +21,7 @@ def crear_usuario_empleado(email, password, nombre, rol, sucursal_id):
         password (str): Contraseña temporal
         nombre (str): Nombre completo del empleado
         rol (str): 'admin' o 'empleado'
-        sucursal_id (str): ID de la sucursal (1-4)
+        sucursal_id (str): ID de la sucursal (S1-S4)
     
     Returns:
         dict: Información del usuario creado o error
@@ -32,8 +32,8 @@ def crear_usuario_empleado(email, password, nombre, rol, sucursal_id):
             return {'success': False, 'error': 'Rol inválido. Debe ser "admin" o "empleado"'}
         
         # Validar sucursal_id
-        if sucursal_id not in ['1', '2', '3', '4']:
-            return {'success': False, 'error': 'Sucursal inválida. Debe ser entre 1 y 4'}
+        if sucursal_id not in ['S1', 'S2', 'S3', 'S4']:
+            return {'success': False, 'error': 'Sucursal inválida. Debe ser S1, S2, S3 o S4'}
         
         # Crear usuario en Firebase Auth
         user = auth.create_user(

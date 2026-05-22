@@ -43,15 +43,15 @@ def prompt_create_user():
         rol = input("Rol ('admin' o 'empleado'): ").strip().lower()
 
     # Sucursal (si aplica)
-    sucursal_id = '1'
+    sucursal_id = 'S1'
     if rol == 'empleado':
-        sucursal_id = input('Sucursal ID (1-4) [1]: ').strip() or '1'
-        if sucursal_id not in ('1', '2', '3', '4'):
-            print('Sucursal inválida. Usando 1.')
-            sucursal_id = '1'
+        sucursal_id = input('Sucursal ID (S1-S4) [S1]: ').strip() or 'S1'
+        if sucursal_id not in ('S1', 'S2', 'S3', 'S4'):
+            print('Sucursal inválida. Usando S1.')
+            sucursal_id = 'S1'
     else:
         # para admin se acepta valor opcional
-        sucursal_id = input('Sucursal ID (opcional) [1]: ').strip() or '1'
+        sucursal_id = input('Sucursal ID (opcional) [S1]: ').strip() or 'S1'
 
     print('\nCreando usuario...')
     res = crear_usuario_empleado(email, password, nombre, rol, sucursal_id)

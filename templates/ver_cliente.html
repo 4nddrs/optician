@@ -2,6 +2,116 @@
 
 {% block title %}{{ cliente.nombre_completo }} - Detalle Cliente{% endblock %}
 
+{% block extra_css %}
+<style>
+.detail-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.detail-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.detail-card-actions .btn-primary,
+.detail-card-actions .btn-secondary {
+    white-space: nowrap;
+}
+
+.edit-client-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.75);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.edit-client-modal .modal-panel {
+    width: 100%;
+    max-width: 640px;
+    background: var(--surface-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+}
+
+.edit-client-modal .modal-header,
+.edit-client-modal .modal-footer {
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.edit-client-modal .modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.edit-client-modal .modal-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.edit-client-modal .modal-body {
+    padding: 1.25rem;
+}
+
+.edit-client-modal .modal-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.edit-client-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.edit-client-modal .modal-close {
+    background: transparent;
+    border: 0;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 640px) {
+    .detail-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .detail-card-actions {
+        width: 100%;
+    }
+
+    .detail-card-actions .btn-primary,
+    .detail-card-actions .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .edit-client-modal .modal-header,
+    .edit-client-modal .modal-footer {
+        padding: 0.9rem 1rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div class="header-content">
@@ -17,11 +127,19 @@
 
 <div class="cliente-detail-grid">
     <div class="detail-card">
-        <div class="card-header">
-            <div class="card-icon">
-                <i class="fas fa-id-card"></i>
+        <div class="card-header detail-card-header">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div class="card-icon">
+                    <i class="fas fa-id-card"></i>
+                </div>
+                <h3>Información Personal</h3>
             </div>
-            <h3>Información Personal</h3>
+            <div class="detail-card-actions">
+                <button type="button" class="btn-primary" id="openEditClientModal">
+                    <i class="fas fa-pen"></i>
+                    Editar Cliente
+                </button>
+            </div>
         </div>
         <div class="detail-content">
             <div class="detail-row">
@@ -103,4 +221,110 @@
         Nueva Orden para este Cliente
     </a>
 </div>
+
+<div id="editClientModal" class="edit-client-modal" aria-hidden="true">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="editClientTitle">
+        <div class="modal-header">
+            <h3 id="editClientTitle"><i class="fas fa-user-edit"></i> Editar Cliente</h3>
+            <button type="button" class="modal-close" id="closeEditClientModal" aria-label="Cerrar modal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="editClientForm">
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="form-group">
+                        <label for="editCi"><i class="fas fa-id-card"></i> Carnet de Identidad: *</label>
+                        <input type="text" id="editCi" name="ci" class="form-input" value="{{ cliente.ci }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editNombre"><i class="fas fa-user"></i> Nombre Completo: *</label>
+                        <input type="text" id="editNombre" name="nombre_completo" class="form-input" value="{{ cliente.nombre_completo }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editTelefono"><i class="fas fa-phone"></i> Teléfono: *</label>
+                        <input type="tel" id="editTelefono" name="telefono" class="form-input" value="{{ cliente.telefono }}" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancelEditClientModal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary" id="saveEditClientBtn">
+                        <i class="fas fa-save"></i>
+                        Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const editClientModal = document.getElementById('editClientModal');
+const openEditClientModal = document.getElementById('openEditClientModal');
+const closeEditClientModal = document.getElementById('closeEditClientModal');
+const cancelEditClientModal = document.getElementById('cancelEditClientModal');
+const editClientForm = document.getElementById('editClientForm');
+const saveEditClientBtn = document.getElementById('saveEditClientBtn');
+
+function openClientModal() {
+    editClientModal.style.display = 'flex';
+    editClientModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeClientModal() {
+    editClientModal.style.display = 'none';
+    editClientModal.setAttribute('aria-hidden', 'true');
+}
+
+openEditClientModal.addEventListener('click', openClientModal);
+closeEditClientModal.addEventListener('click', closeClientModal);
+cancelEditClientModal.addEventListener('click', closeClientModal);
+
+editClientModal.addEventListener('click', function(e) {
+    if (e.target === editClientModal) {
+        closeClientModal();
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && editClientModal.style.display === 'flex') {
+        closeClientModal();
+    }
+});
+
+editClientForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const originalHtml = saveEditClientBtn.innerHTML;
+    saveEditClientBtn.disabled = true;
+    saveEditClientBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+    try {
+        const response = await fetch('{{ url_for("editar_cliente", cliente_id=cliente.id) }}', {
+            method: 'POST',
+            body: new FormData(this)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            window.location.reload();
+            return;
+        }
+
+        alert('Error: ' + (result.error || 'No se pudo actualizar el cliente'));
+    } catch (error) {
+        alert('Error al guardar el cliente: ' + error.message);
+    } finally {
+        saveEditClientBtn.disabled = false;
+        saveEditClientBtn.innerHTML = originalHtml;
+    }
+});
+</script>
 {% endblock %}

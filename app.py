@@ -400,24 +400,77 @@ def ver_cliente(cliente_id):
         if not cliente:
             return render_template('error.html', error='Cliente no encontrado')
         
-        # Get client orders
-        ordenes = fb.get_all_orders()
-        ordenes_cliente = [o for o in ordenes if o.get('id_cliente') == cliente_id]
+        # Get client orders from historial_ordenes (order IDs)
+        historial_ordenes = cliente.get('historial_ordenes', [])
+        ordenes_cliente = fb.get_orders_by_ids(historial_ordenes)
         
         return render_template('ver_cliente.html', cliente=cliente, ordenes=ordenes_cliente)
     except Exception as e:
         return render_template('error.html', error=str(e))
 
+@app.route('/clientes/<cliente_id>/editar', methods=['GET', 'POST'])
+def editar_cliente(cliente_id):
+    try:
+        cliente = fb.get_client_by_id(cliente_id)
+        if not cliente:
+            return render_template('error.html', error='Cliente no encontrado')
+
+        if request.method == 'POST':
+            data = {
+                'ci': request.form.get('ci'),
+                'nombre_completo': request.form.get('nombre_completo'),
+                'telefono': request.form.get('telefono')
+            }
+
+            if not all([data['ci'], data['nombre_completo'], data['telefono']]):
+                return jsonify({'success': False, 'error': 'Todos los campos son obligatorios'}), 400
+
+            fb.update_client(cliente_id, data)
+            return jsonify({'success': True, 'cliente_id': cliente_id})
+
+        return render_template('editar_cliente.html', cliente=cliente)
+    except Exception as e:
+        return render_template('error.html', error=str(e))
+
 @app.route('/api/clientes/buscar')
 def buscar_cliente():
-    ci = request.args.get('ci')
-    if not ci:
-        return jsonify({'success': False, 'error': 'CI requerido'}), 400
-    
     try:
-        cliente = fb.get_client_by_ci(ci)
-        if cliente:
-            return jsonify({'success': True, 'cliente': cliente})
+        ci = (request.args.get('ci') or '').strip()
+        query = (request.args.get('q') or '').strip().lower()
+
+        if not ci and not query:
+            return jsonify({'success': False, 'error': 'CI o texto de búsqueda requerido'}), 400
+
+        if ci:
+            cliente = fb.get_client_by_ci(ci)
+            if cliente:
+                return jsonify({'success': True, 'cliente': cliente})
+
+        if query:
+            clientes = fb.get_all_clients()
+            coincidencias = []
+
+            for cliente in clientes:
+                nombre = str(cliente.get('nombre_completo') or '').lower()
+                ci_cliente = str(cliente.get('ci') or '').lower()
+                telefono = str(cliente.get('telefono') or '').lower()
+
+                if query in nombre or query in ci_cliente or query in telefono:
+                    coincidencias.append(cliente)
+
+            if coincidencias:
+                coincidencias.sort(key=lambda c: (
+                    0 if str(c.get('ci') or '').lower() == query else 1,
+                    str(c.get('nombre_completo') or '').lower()
+                ))
+
+                respuesta = {'success': True, 'clientes': coincidencias[:10]}
+
+                if len(coincidencias) == 1:
+                    respuesta['cliente'] = coincidencias[0]
+
+                return jsonify(respuesta)
+
         return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -714,6 +767,59 @@ def sucursales():
         return render_template('sucursales.html', sucursales=sucursales)
     except Exception as e:
         return render_template('error.html', error=str(e))
+
+@app.route('/sucursales/crear', methods=['POST'])
+@login_required
+@admin_required
+def crear_sucursal():
+    try:
+        sucursal_id = (request.form.get('id') or '').strip()
+        nombre = (request.form.get('nombre') or '').strip()
+        direccion = (request.form.get('direccion') or '').strip()
+        ubicacion = (request.form.get('ubicacion') or '').strip()
+
+        if not all([sucursal_id, nombre, direccion]):
+            return jsonify({'success': False, 'error': 'ID, nombre y dirección son obligatorios'}), 400
+
+        if fb.get_branch_by_id(sucursal_id):
+            return jsonify({'success': False, 'error': 'Ya existe una sucursal con ese ID'}), 400
+
+        data = {
+            'nombre': nombre,
+            'direccion': direccion,
+            'ubicacion': ubicacion,
+        }
+
+        fb.create_branch(sucursal_id, data)
+        return jsonify({'success': True, 'sucursal_id': sucursal_id})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/sucursales/<sucursal_id>/editar', methods=['POST'])
+@login_required
+@admin_required
+def editar_sucursal(sucursal_id):
+    try:
+        nombre = (request.form.get('nombre') or '').strip()
+        direccion = (request.form.get('direccion') or '').strip()
+        ubicacion = (request.form.get('ubicacion') or '').strip()
+
+        if not all([nombre, direccion]):
+            return jsonify({'success': False, 'error': 'Nombre y dirección son obligatorios'}), 400
+
+        if not fb.get_branch_by_id(sucursal_id):
+            return jsonify({'success': False, 'error': 'Sucursal no encontrada'}), 404
+
+        data = {
+            'nombre': nombre,
+            'direccion': direccion,
+            'ubicacion': ubicacion,
+        }
+
+        fb.update_branch(sucursal_id, data)
+        return jsonify({'success': True, 'sucursal_id': sucursal_id})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # Error handlers
 @app.errorhandler(404)

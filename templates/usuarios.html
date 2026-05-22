@@ -580,6 +580,9 @@ async function loadSucursales() {
             allSucursales = data.sucursales;
             populateSucursalSelect('detailSucursal', allSucursales);
             populateFilterSucursal(allSucursales); // <-- Nueva línea
+            if (allUsers.length > 0) {
+                renderUsers(allUsers);
+            }
         }
     } catch (error) {
         console.error('Error cargando sucursales:', error);

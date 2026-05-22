@@ -118,11 +118,11 @@ def update_client(client_id, data):
     # Invalidate cache
     _cache['clients']['timestamp'] = None
 
-def add_order_to_client(client_id, order_number):
-    """Add order number to client history"""
+def add_order_to_client(client_id, order_id):
+    """Add order ID to client history"""
     cliente_ref = db.collection('clientes').document(client_id)
     cliente_ref.update({
-        'historial_ordenes': firestore.ArrayUnion([order_number])
+        'historial_ordenes': firestore.ArrayUnion([order_id])
     })
 
 # Branch functions
@@ -151,6 +151,18 @@ def get_branch_by_id(branch_id):
         return sucursal
     return None
 
+def create_branch(branch_id, data):
+    """Create a new branch using the provided branch ID."""
+    db.collection('sucursales').document(branch_id).set(data)
+    _cache['branches']['timestamp'] = None
+    return branch_id
+
+def update_branch(branch_id, data):
+    """Update an existing branch."""
+    db.collection('sucursales').document(branch_id).update(data)
+    _cache['branches']['timestamp'] = None
+    return branch_id
+
 # Work order functions
 def get_all_orders(limit=None):
     """Get all work orders with optional limit"""
@@ -173,6 +185,22 @@ def get_order_by_id(order_id):
         orden['id'] = doc.id
         return orden
     return None
+
+def get_orders_by_ids(order_ids):
+    """Get multiple orders by their IDs, preserving the provided order."""
+    orders = []
+    seen = set()
+
+    for order_id in order_ids or []:
+        if not order_id or order_id in seen:
+            continue
+        seen.add(order_id)
+
+        orden = get_order_by_id(order_id)
+        if orden:
+            orders.append(orden)
+
+    return orders
 
 def get_orders_by_branch(branch_id):
     """Get orders filtered by branch"""
@@ -219,7 +247,7 @@ def create_order(data):
     db.collection('ordenes_trabajo').document(id_orden).set(data)
     
     # Update client history
-    add_order_to_client(data['id_cliente'], nro_correlativo)
+    add_order_to_client(data['id_cliente'], id_orden)
     
     return id_orden
 
