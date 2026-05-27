@@ -89,9 +89,18 @@
                                 <i class="fas fa-sync-alt"></i>
                             </button>
                             {% set cliente = clientes_dict.get(orden.id_cliente, {}) %}
+                            {% set sucursal = (sucursales | selectattr('id', 'equalto', orden.id_sucursal) | list | first) %}
                             {% if cliente.get('telefono') %}
                             <a href="javascript:void(0)" 
-                               onclick="enviarWhatsApp('{{ cliente.telefono }}', '{{ cliente.nombre_completo }}', '{{ orden.estado }}', '{{ orden.fecha_entrega }}', '{{ orden.id_orden }}')" 
+                                         data-telefono="{{ cliente.telefono }}"
+                                         data-nombre-cliente="{{ cliente.nombre_completo }}"
+                                         data-estado="{{ orden.estado }}"
+                                         data-fecha-entrega="{{ orden.fecha_entrega }}"
+                                         data-orden-id="{{ orden.id_orden }}"
+                                         data-sucursal-nombre="{{ sucursal.nombre if sucursal else '' }}"
+                                         data-sucursal-direccion="{{ sucursal.direccion if sucursal else '' }}"
+                                         data-sucursal-ubicacion="{{ sucursal.ubicacion if sucursal else '' }}"
+                                         onclick="enviarWhatsApp(this.dataset.telefono, this.dataset.nombreCliente, this.dataset.estado, this.dataset.fechaEntrega, this.dataset.ordenId, this.dataset.sucursalNombre, this.dataset.sucursalDireccion, this.dataset.sucursalUbicacion)" 
                                class="btn-icon whatsapp" 
                                title="Enviar WhatsApp">
                                 <i class="fab fa-whatsapp"></i>

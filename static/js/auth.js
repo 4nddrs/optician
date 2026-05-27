@@ -7,6 +7,49 @@
 let currentUser = null;
 let userProfile = null;
 
+const originalFetch = window.fetch.bind(window);
+
+async function secureFetch(input, init = {}) {
+    try {
+        const requestUrl = input instanceof Request ? input.url : String(input);
+        const url = new URL(requestUrl, window.location.origin);
+
+        if (url.origin !== window.location.origin) {
+            return originalFetch(input, init);
+        }
+
+        const headers = new Headers(input instanceof Request ? input.headers : (init.headers || {}));
+
+        if (typeof firebase !== 'undefined' && firebase.apps.length && !firebase.auth().currentUser) {
+            await waitForFirebaseReady();
+        }
+
+        if (!headers.has('Authorization') && typeof firebase !== 'undefined' && firebase.apps.length && firebase.auth().currentUser) {
+            const token = await firebase.auth().currentUser.getIdToken();
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+        }
+
+        const requestInit = { ...init, headers };
+        if (requestInit.credentials === undefined) {
+            requestInit.credentials = 'include';
+        }
+
+        if (input instanceof Request) {
+            return originalFetch(new Request(input, requestInit));
+        }
+
+        return originalFetch(input, requestInit);
+    } catch (error) {
+        console.warn('⚠️ secureFetch fallback:', error);
+        return originalFetch(input, init);
+    }
+}
+
+window.authFetch = secureFetch;
+window.fetch = secureFetch;
+
 /**
  * Esperar a que Firebase esté listo
  */

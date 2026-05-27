@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, g, abort
 from datetime import datetime
 import firebase_config as fb
 import firebase_auth as fa
@@ -11,16 +11,65 @@ from functools import wraps
 # Load environment variables
 load_dotenv()
 
+
+def _is_local_development():
+    flask_env = os.getenv('FLASK_ENV', 'development').lower()
+    flask_debug = os.getenv('FLASK_DEBUG', '').lower()
+    app_env = os.getenv('APP_ENV', 'development').lower()
+    return (
+        flask_env == 'development'
+        or flask_debug in ['1', 'true', 'yes']
+        or app_env in ['dev', 'development', 'local']
+    )
+
+
+def _safe_profile_dict(perfil):
+    perfil_seguro = {}
+    for clave, valor in (perfil or {}).items():
+        if isinstance(valor, datetime):
+            perfil_seguro[clave] = valor.isoformat()
+        else:
+            perfil_seguro[clave] = valor
+    return perfil_seguro
+
+
+def _build_current_user(uid, decoded_token=None, perfil=None):
+    perfil_seguro = _safe_profile_dict(perfil)
+    rol_token = (decoded_token or {}).get('role')
+    rol_perfil = perfil_seguro.get('rol')
+    sucursal_usuario = perfil_seguro.get('sucursal_id') or perfil_seguro.get('sucursal')
+
+    g.current_user = {
+        'uid': uid,
+        'token': decoded_token or {},
+        'profile': perfil_seguro,
+        'role': (rol_token or rol_perfil or '').lower(),
+        'sucursal': sucursal_usuario,
+    }
+    return g.current_user
+
+
+def _authenticate_from_session():
+    uid = session.get('user_uid')
+    if not uid:
+        return None
+
+    perfil = fa.obtener_usuario_por_uid(uid)
+    if not perfil or not perfil.get('activo', True):
+        return None
+
+    return _build_current_user(uid, perfil=perfil)
+
 # Configurar logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'tu-clave-secreta-super-segura-cambiar-en-produccion')
+app.config['SECRET_KEY'] = os.environ['FLASK_SECRET_KEY']
 
 # Ensure local development session cookies are accepted by browsers
 app.config['SESSION_COOKIE_SAMESITE'] = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
-app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'False') in ['True', 'true', '1']
+app.config['SESSION_COOKIE_SECURE'] = not _is_local_development()
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 
@@ -46,10 +95,33 @@ app.jinja_env.globals['FIREBASE_CONFIG'] = {
 # ========================================
 
 def login_required(f):
-    """Verificar que el usuario esté autenticado (mediante Firebase en frontend)"""
+    """Verificar que el usuario esté autenticado con un ID token de Firebase."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Aquí iría la verificación del token si es necesario
+        auth_header = request.headers.get('Authorization', '')
+        current_user = None
+
+        if auth_header.startswith('Bearer '):
+            token = auth_header.split(' ', 1)[1].strip()
+            if token:
+                try:
+                    decoded_token = firebase_admin.auth.verify_id_token(token, check_revoked=True)
+                    uid = decoded_token.get('uid')
+                    if uid:
+                        perfil = fa.obtener_usuario_por_uid(uid)
+                        if perfil and perfil.get('activo', True):
+                            current_user = _build_current_user(uid, decoded_token=decoded_token, perfil=perfil)
+                except Exception:
+                    current_user = None
+
+        if current_user is None:
+            current_user = _authenticate_from_session()
+
+        if current_user is None:
+            if request.path.startswith('/api/'):
+                return jsonify({'success': False, 'error': 'Se requiere un token de acceso'}), 401
+            abort(401, description='Se requiere un token de acceso')
+
         return f(*args, **kwargs)
     return decorated_function
 
@@ -58,14 +130,46 @@ def admin_required(f):
     """Verificar que el usuario autenticado tenga rol de admin."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        user_role = session.get('user_role') or request.cookies.get('optica_user_role')
-        if (user_role or '').lower() != 'admin':
+        current_user = getattr(g, 'current_user', None) or _authenticate_from_session()
+        if not current_user:
+            if request.path.startswith('/api/'):
+                return jsonify({'success': False, 'error': 'Autenticación requerida'}), 401
+            abort(401, description='Autenticación requerida')
+
+        role = (current_user.get('token', {}).get('role') or current_user.get('role') or current_user.get('profile', {}).get('rol') or '').lower()
+        if role != 'admin':
             if request.path.startswith('/api/'):
                 return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
-            return redirect('/')
+            abort(403, description='Acceso denegado')
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+def _user_can_access_order(orden):
+    """Permite acceso a la orden para usuarios autenticados.
+
+    La verificación por sucursal se deja comentada como referencia para casos
+    donde se quiera reactivar un control más estricto a nivel de recurso.
+    """
+    current_user = getattr(g, 'current_user', None)
+    if not current_user:
+        return False
+
+    role = (current_user.get('token', {}).get('role') or current_user.get('role') or current_user.get('profile', {}).get('rol') or '').lower()
+    if role == 'admin':
+        return True
+
+    # user_branch = str(current_user.get('sucursal') or current_user.get('profile', {}).get('sucursal_id') or '').strip()
+    # order_branch = str((orden or {}).get('id_sucursal') or '').strip()
+    # return bool(user_branch and order_branch and user_branch == order_branch)
+    return True
+
+
+def _forbid_order_access(message='No tienes acceso a esta orden'):
+    if request.path.startswith('/api/'):
+        return jsonify({'success': False, 'error': message}), 403
+    abort(403, description=message)
 
 # ========================================
 # RUTAS DE AUTENTICACIÓN
@@ -78,6 +182,7 @@ def login():
 
 # Ruta de Logout
 @app.route('/logout')
+@login_required
 def logout():
     # El logout se maneja en el frontend con Firebase
     session.clear()
@@ -85,6 +190,7 @@ def logout():
 
 # Ruta de Perfil
 @app.route('/perfil')
+@login_required
 def perfil():
     return render_template('perfil.html')
 
@@ -280,14 +386,14 @@ def cambiar_contrasena():
 
 # API: Verificar estado del usuario
 @app.route('/api/auth/check-status', methods=['POST'])
+@login_required
 def check_user_status():
     try:
-        data = request.get_json()
-        uid = data.get('uid')
-        
+        current_user = getattr(g, 'current_user', None)
+        uid = current_user.get('uid') if current_user else None
         if not uid:
-            return jsonify({'success': False, 'error': 'UID no proporcionado'}), 400
-            
+            return jsonify({'success': False, 'error': 'Autenticación requerida'}), 401
+
         resultado = fa.verificar_estado_usuario(uid)
         
         if 'error' in resultado:
@@ -310,6 +416,7 @@ def obtener_sucursales():
 
 # Main route - Dashboard
 @app.route('/')
+@login_required
 def index():
     try:
         ordenes = fb.get_all_orders()
@@ -370,6 +477,7 @@ def api_control_datos():
 
 # Client routes
 @app.route('/clientes')
+@login_required
 def clientes():
     try:
         clientes = fb.get_all_clients()
@@ -378,6 +486,7 @@ def clientes():
         return render_template('error.html', error=str(e))
 
 @app.route('/clientes/nuevo', methods=['GET', 'POST'])
+@login_required
 def nuevo_cliente():
     if request.method == 'POST':
         try:
@@ -394,6 +503,7 @@ def nuevo_cliente():
     return render_template('nuevo_cliente.html')
 
 @app.route('/clientes/<cliente_id>')
+@login_required
 def ver_cliente(cliente_id):
     try:
         cliente = fb.get_client_by_id(cliente_id)
@@ -409,6 +519,7 @@ def ver_cliente(cliente_id):
         return render_template('error.html', error=str(e))
 
 @app.route('/clientes/<cliente_id>/editar', methods=['GET', 'POST'])
+@login_required
 def editar_cliente(cliente_id):
     try:
         cliente = fb.get_client_by_id(cliente_id)
@@ -433,6 +544,7 @@ def editar_cliente(cliente_id):
         return render_template('error.html', error=str(e))
 
 @app.route('/api/clientes/buscar')
+@login_required
 def buscar_cliente():
     try:
         ci = (request.args.get('ci') or '').strip()
@@ -477,6 +589,7 @@ def buscar_cliente():
 
 # Order routes
 @app.route('/ordenes')
+@login_required
 def ordenes():
     try:
         ordenes = fb.get_all_orders()
@@ -491,6 +604,7 @@ def ordenes():
         return render_template('error.html', error=str(e))
 
 @app.route('/ordenes/nueva', methods=['GET', 'POST'])
+@login_required
 def nueva_orden():
     if request.method == 'POST':
         try:
@@ -569,11 +683,15 @@ def nueva_orden():
         return render_template('error.html', error=str(e))
 
 @app.route('/ordenes/<orden_id>')
+@login_required
 def ver_orden(orden_id):
     try:
         orden = fb.get_order_by_id(orden_id)
         if not orden:
             return render_template('error.html', error='Orden no encontrada')
+
+        if not _user_can_access_order(orden):
+            return _forbid_order_access()
         
         cliente = fb.get_client_by_id(orden.get('id_cliente'))
         sucursal = fb.get_branch_by_id(orden.get('id_sucursal'))
@@ -608,6 +726,9 @@ def descargar_pdf_orden(orden_id):
         orden = fb.get_order_by_id(orden_id)
         if not orden:
             return jsonify({'success': False, 'error': 'Orden no encontrada'}), 404
+
+        if not _user_can_access_order(orden):
+            return _forbid_order_access()
         
         # Obtener cliente y sucursal
         cliente = fb.get_client_by_id(orden.get('id_cliente'))
@@ -624,6 +745,7 @@ def descargar_pdf_orden(orden_id):
         return jsonify({'success': False, 'error': f'Error al generar PDF: {str(e)}'}), 500
 
 @app.route('/ordenes/<orden_id>/editar', methods=['GET', 'POST'])
+@login_required
 def editar_orden(orden_id):
     import json
     from datetime import datetime
@@ -631,6 +753,14 @@ def editar_orden(orden_id):
         orden = fb.get_order_by_id(orden_id)
         if not orden:
             return jsonify({'success': False, 'error': 'Orden no encontrada'}) if request.method == 'POST' else render_template('error.html', error='Orden no encontrada')
+
+        # current_user = getattr(g, 'current_user', None) or {}
+        # role = (current_user.get('token', {}).get('role') or current_user.get('role') or current_user.get('profile', {}).get('rol') or '').lower()
+        # if role != 'admin':
+        #     user_branch = str(current_user.get('sucursal') or current_user.get('profile', {}).get('sucursal_id') or '').strip()
+        #     order_branch = str((orden or {}).get('id_sucursal') or '').strip()
+        #     if not user_branch or not order_branch or user_branch != order_branch:
+        #         return _forbid_order_access('Solo puedes editar órdenes de tu sucursal')
         
         if request.method == 'GET':
             sucursales = fb.get_all_branches()
@@ -740,8 +870,16 @@ def editar_orden(orden_id):
         return render_template('error.html', error=str(e))
 
 @app.route('/api/ordenes/<orden_id>/estado', methods=['PUT'])
+@login_required
 def actualizar_estado(orden_id):
     try:
+        orden = fb.get_order_by_id(orden_id)
+        if not orden:
+            return jsonify({'success': False, 'error': 'Orden no encontrada'}), 404
+
+        if not _user_can_access_order(orden):
+            return _forbid_order_access()
+
         new_status = request.json.get('estado')
         if not new_status:
             return jsonify({'success': False, 'error': 'Estado requerido'}), 400
@@ -752,8 +890,16 @@ def actualizar_estado(orden_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/ordenes/<orden_id>', methods=['DELETE'])
+@login_required
 def eliminar_orden(orden_id):
     try:
+        orden = fb.get_order_by_id(orden_id)
+        if not orden:
+            return jsonify({'success': False, 'error': 'Orden no encontrada'}), 404
+
+        if not _user_can_access_order(orden):
+            return _forbid_order_access()
+
         fb.delete_order(orden_id)
         return jsonify({'success': True})
     except Exception as e:
@@ -761,6 +907,7 @@ def eliminar_orden(orden_id):
 
 # Branch routes
 @app.route('/sucursales')
+@login_required
 def sucursales():
     try:
         sucursales = fb.get_all_branches()
@@ -886,13 +1033,9 @@ def api_me():
             logger.info(f"Session populated for uid={uid} role={session.get('user_role')}")
             logger.info(f"Session keys now: {list(session.keys())}")
 
-            # Build response and set a readable cookie with the role so browser navigations include it
+            # Build response and populate server-side session for non-auth UI state
             from flask import make_response
             resp = make_response(jsonify({'success': True, 'usuario': perfil_safe, 'uid': uid}))
-            samesite = app.config.get('SESSION_COOKIE_SAMESITE', 'Lax')
-            secure = app.config.get('SESSION_COOKIE_SECURE', False)
-            # Cookie is not HttpOnly so client navigations send it and server can read as fallback
-            resp.set_cookie('optica_user_role', session['user_role'] or '', samesite=samesite, secure=secure, httponly=False)
             return resp
         else:
             return jsonify({'success': False, 'error': 'Perfil no encontrado', 'uid': uid}), 404
@@ -901,5 +1044,10 @@ def api_me():
         return jsonify({'success': False, 'error': str(e)}), 401
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    is_local_dev = _is_local_development()
+    app.run(
+        debug=is_local_dev,
+        host='0.0.0.0' if is_local_dev else '127.0.0.1',
+        port=int(os.getenv('PORT', 5000))
+    )
 

@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Send WhatsApp message
-function enviarWhatsApp(telefono, nombreCliente, estado, fechaEntrega, ordenId) {
+function enviarWhatsApp(telefono, nombreCliente, estado, fechaEntrega, ordenId, nombreSucursal = '', direccionSucursal = '', ubicacionSucursal = '') {
     // Format phone number (add +591 prefix if not present)
     let numeroFormateado = telefono.replace(/\D/g, ''); // Remove non-digits
     if (!numeroFormateado.startsWith('591')) {
@@ -119,27 +119,39 @@ function enviarWhatsApp(telefono, nombreCliente, estado, fechaEntrega, ordenId) 
     
     // Translate status to Spanish friendly text
     const estadosTexto = {
-        'Pendiente': 'PENDIENTE de procesamiento',
-        'Progreso': 'EN PROCESO',
-        'Listo': 'LISTO para entrega',
-        'Entregado': 'ENTREGADO'
-    };
+    'Pendiente': '*registrado y pendiente de procesamiento*',
+    'Progreso': '*en proceso de elaboración*',
+    'Listo': '*listo para su entrega*',
+    'Entregado': '*entregado correctamente*'
+};
     
     const estadoTexto = estadosTexto[estado] || estado.toUpperCase();
+
+    const detalleSucursal = nombreSucursal || direccionSucursal || ubicacionSucursal
+        ? `
+Sucursal: ${nombreSucursal || 'No especificada'}
+Dirección: ${direccionSucursal || 'No especificada'}
+Ubicación: ${ubicacionSucursal || 'No especificada'}
+`
+        : '';
     
     // Create message without emojis to avoid encoding issues
-    const mensaje = `Hola ${nombreCliente}!
+    const mensaje = `Hola ${nombreCliente},
 
-Somos *Optica V-CLARO*
+Gracias por elegir Óptica V-CLARO.
 
-Le informamos que su pedido esta *${estadoTexto}*.
+Queremos informarle que su pedido se encuentra ${estadoTexto}.
 
-*Fecha de entrega:* ${fechaEntrega}
-*N° orden:* ${ordenId}
+N.º de orden: ${ordenId}
+Fecha de entrega: ${fechaEntrega}
 
-Puede pasar por nuestra sucursal en la fecha indicada para recoger su pedido.
+${detalleSucursal}
 
-Gracias por confiar en nosotros!`;
+Le esperamos en nuestra sucursal para la entrega de su pedido en la fecha indicada.
+
+Muchas gracias por su preferencia.
+
+Óptica V-CLARO`;
     
     // Encode message for URL
     const mensajeCodificado = encodeURIComponent(mensaje);
