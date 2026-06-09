@@ -496,7 +496,7 @@ select option {
 <script>
 // Cargar datos del perfil
 async function loadProfile() {
-    const user = firebase.auth().currentUser;
+    const user = getCurrentUser();
     if (!user) {
         window.location.href = '/login';
         return;
@@ -640,35 +640,33 @@ document.getElementById('saveSucursalBtn').addEventListener('click', function() 
 
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', function() {
-    firebase.auth().signOut().then(() => {
-        window.location.href = '/login';
-    });
+    logoutUser();
 });
 
 // Cargar perfil al abrir
-if (typeof waitForFirebaseReady === 'function') {
-    waitForFirebaseReady().then(() => {
-        setupPerfilAuthListener();
-    });
-} else {
-    function checkFirebaseAndSetupPerfil() {
-        if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
-            setupPerfilAuthListener();
-        } else {
-            setTimeout(checkFirebaseAndSetupPerfil, 100);
-        }
+function setupPerfilAuthListener() {
+    const user = getCurrentUser();
+    if (user) {
+        loadProfile();
+    } else {
+        window.location.href = '/login';
     }
-    checkFirebaseAndSetupPerfil();
 }
 
-function setupPerfilAuthListener() {
-    firebase.auth().onAuthStateChanged(function(user) {
-        if (user) {
-            loadProfile();
-        } else {
-            window.location.href = '/login';
-        }
-    });
-}
+// Esperar a que auth.js inicialice
+const checkAuthInterval = setInterval(() => {
+    if (typeof getCurrentUser === 'function') {
+        clearInterval(checkAuthInterval);
+        setupPerfilAuthListener();
+    }
+}, 100);
+
+// Timeout de seguridad
+setTimeout(() => {
+    clearInterval(checkAuthInterval);
+    if (typeof getCurrentUser === 'function') {
+        setupPerfilAuthListener();
+    }
+}, 3000);
 </script>
 {% endblock %}

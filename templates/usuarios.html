@@ -779,7 +779,13 @@ document.getElementById('btnUpdateUser').addEventListener('click', async functio
     btn.disabled = true;
 
     try {
-        const idToken = await firebase.auth().currentUser.getIdToken();
+        const currentUser = getCurrentUser();
+        if (!currentUser) {
+            showNotification('Error: Usuario no autenticado', 'error');
+            return;
+        }
+
+        const idToken = await currentUser.getIdToken();
         const data = {
             nombre: document.getElementById('detailName').value,
             email: document.getElementById('detailEmail').value,
@@ -860,79 +866,41 @@ document.getElementById('nextPageBtn').addEventListener('click', function() {
     }
 });
 
-// Verificar si es admin después de que Firebase inicialice
-if (typeof waitForFirebaseReady === 'function') {
-    waitForFirebaseReady().then(() => {
-        setupUserAuthListener();
-    });
-} else {
-    // Fallback por si auth.js falla
-    function checkFirebaseAndSetup() {
-        if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
-            setupUserAuthListener();
-        } else {
-            setTimeout(checkFirebaseAndSetup, 100);
+async function bootstrapUsuariosPage() {
+    const deadline = Date.now() + 6000;
+
+    while (Date.now() < deadline) {
+        if (typeof getCurrentUser === 'function') {
+            const user = getCurrentUser();
+            if (user) {
+                try {
+                    const cachedUser = localStorage.getItem('optica_user_data');
+                    if (cachedUser) {
+                        const parsed = JSON.parse(cachedUser);
+                        currentUser = { ...parsed, uid: user.uid };
+                        if (currentUser.rol === 'admin') {
+                            document.getElementById('adminOnlyButton').style.display = 'flex';
+                        }
+                    }
+                } catch (e) {}
+
+                console.log("Iniciando llamada a loadUsers()...");
+                loadUsers();
+                loadSucursales();
+                return;
+            }
         }
+
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
-    checkFirebaseAndSetup();
+
+    window.location.href = '/login';
 }
 
-function setupUserAuthListener() {
-    firebase.auth().onAuthStateChanged(async function(user) {
-        if (!user) {
-            window.location.href = '/login';
-            return;
-        }
-
-        // 1. Inmediatamente usar datos cacheados si existen para la UI optimista
-        try {
-            const cachedUser = localStorage.getItem('optica_user_data');
-            if (cachedUser) {
-                const parsed = JSON.parse(cachedUser);
-                currentUser = { ...parsed, uid: user.uid };
-                if (currentUser.rol === 'admin') {
-                    document.getElementById('adminOnlyButton').style.display = 'flex';
-                }
-            }
-        } catch(e) {}
-
-        // 2. Disparar loadUsers() asíncronamente (sin esperar a /api/me)
-        console.log("Iniciando llamada a loadUsers()...");
-        loadUsers();
-
-        // 3. Validar perfil sigilosamente de fondo
-        try {
-            const idToken = await user.getIdToken();
-            const resp = await fetch('/api/me', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + idToken
-                },
-                body: JSON.stringify({})
-            });
-
-            if (resp.ok) {
-                const json = await resp.json();
-                if (json.success && json.usuario) {
-                    currentUser = { ...json.usuario, uid: user.uid };
-                    localStorage.setItem('optica_user_data', JSON.stringify(json.usuario));
-                    if (currentUser.rol === 'admin') {
-                        document.getElementById('adminOnlyButton').style.display = 'flex';
-                    } else {
-                        document.getElementById('adminOnlyButton').style.display = 'none';
-                    }
-                }
-            } else {
-                console.warn('No se pudo obtener perfil desde /api/me');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        }
-        
-        // Cargar sucursales
-        await loadSucursales();
-    });
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrapUsuariosPage);
+} else {
+    bootstrapUsuariosPage();
 }
 </script>
 {% endblock %}

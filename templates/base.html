@@ -13,7 +13,7 @@
     <link rel="manifest" href="{{ url_for('static', filename='favicon/site.webmanifest') }}" />
     
     <!-- iOS Meta Tags -->
-    <meta name="apple-mobile-web-app-title" content="Óptica" />
+    <meta name="apple-mobile-web-app-title" content="V-CLARO" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     
@@ -415,7 +415,7 @@
             <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
                 <a href="{{ url_for('index') }}" class="nav-brand">
                     <i class="fas fa-glasses"></i>
-                    <span>Óptica</span>
+                    <span>V-CLARO</span>
                 </a>
                 <div class="nav-menu">
                     <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
@@ -571,16 +571,26 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Compat (v9.23.0) -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-compat.js"></script>
+    <!-- Import Map for Firebase v10+ Modular SDK -->
+    <script type="importmap">
+    {
+        "imports": {
+            "firebase/app": "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js",
+            "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js",
+            "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js"
+        }
+    }
+    </script>
     
-    <!-- App Scripts -->
+    <!-- Firebase Configuration (Injected from Server) -->
     <script>
         // Firebase client config injected from server-side env (.env)
         window.__FIREBASE_CONFIG = {{ FIREBASE_CONFIG | tojson }};
     </script>
-    <script src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    
+    <!-- Firebase Initialization & Auth Module -->
+    <script type="module" src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     
     <!-- Navbar User Menu Handler -->
@@ -590,8 +600,8 @@
 
         // Esperar a que Firebase esté listo
         function setupUserMenu() {
-            // Comprobar si Firebase está listo
-            if (typeof firebase === 'undefined' || !firebase.apps.length) {
+            // Comprobar si Firebase esté listo
+            if (!window.firebaseReady) {
                 // Esperar 100ms e intentar de nuevo
                 setTimeout(setupUserMenu, 100);
                 return;
@@ -745,50 +755,40 @@
             }
 
             // Actualizar información del usuario (usando el endpoint servidor /api/me)
-            firebase.auth().onAuthStateChanged(async function(user) {
-                if (user) {
-                    try {
-                        // Obtener ID token y solicitar el perfil al servidor
-                        const idToken = await user.getIdToken();
-                        const resp = await fetch('/api/me', {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': 'Bearer ' + idToken
-                            },
-                            body: JSON.stringify({})
-                        });
+            // Utilizar fetch que inyecta Bearer token automáticamente
+            (async () => {
+                try {
+                    // Esperar a que el usuario esté autenticado
+                    await new Promise(resolve => {
+                        const checkInterval = setInterval(() => {
+                            if (getCurrentUserProfile && getCurrentUserProfile()) {
+                                clearInterval(checkInterval);
+                                resolve();
+                            }
+                        }, 100);
+                        setTimeout(() => {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }, 5000);
+                    });
 
-                        if (!resp.ok) {
-                            throw new Error('Server returned ' + resp.status);
-                        }
-
-                        const json = await resp.json();
-                        if (json.success && json.usuario) {
-                            userData = json.usuario;
-                            localStorage.setItem('optica_user_data', JSON.stringify(userData));
-                            renderUserData(userData);
-                        }
-                    } catch (error) {
-                        console.error('❌ Error cargando datos del usuario:', error);
+                    const profile = getCurrentUserProfile && getCurrentUserProfile();
+                    if (profile) {
+                        userData = profile;
+                        localStorage.setItem('optica_user_data', JSON.stringify(userData));
+                        renderUserData(userData);
                     }
+                } catch (error) {
+                    console.error('❌ Error cargando datos del usuario:', error);
                 }
-            });
+            })();
 
-            // Logout
+            // Logout - usar la función global del módulo auth.js
             const handleLogout = async () => {
                 localStorage.removeItem('optica_user_data');
-
-                try {
-                    await fetch('/logout', { method: 'GET', credentials: 'include' });
-                } catch (error) {
-                    console.warn('No se pudo limpiar la sesión del servidor', error);
+                if (typeof logoutUser === 'function') {
+                    logoutUser();
                 }
-
-                firebase.auth().signOut().then(() => {
-                    window.location.href = '/login';
-                });
             };
 
             const logoutBtn = document.getElementById('logoutBtn');

@@ -314,32 +314,92 @@
         </div>
     </div>
 
-    <!-- Firebase SDK Compat (v9.23.0) - Incluye app, auth, firestore, etc -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-compat.js"></script>
+    <!-- Import Map for Firebase v10+ Modular SDK -->
+    <script type="importmap">
+    {
+        "imports": {
+            "firebase/app": "https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js",
+            "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js",
+            "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js"
+        }
+    }
+    </script>
+    
+    <!-- Firebase Configuration (Injected from Server) -->
     <script>
         // Inyectar configuración cliente de Firebase desde el servidor (.env)
         window.__FIREBASE_CONFIG = {{ FIREBASE_CONFIG | tojson }};
     </script>
-    <script src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    
+    <!-- Firebase Initialization & Auth Module -->
+    <script type="module" src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>
     
     <script>
         // Verificar que Firebase se cargó
         window.addEventListener('load', function() {
             // Esperar a que firebase-config termine de intentar inicializar
             setTimeout(() => {
-                if (typeof firebase === 'undefined' || !firebase.apps.length) {
+                if (!window.firebaseReady) {
                     console.error('❌ FIREBASE NO CARGÓ');
-                    document.getElementById('errorMessage').classList.add('show');
-                    document.getElementById('errorText').textContent = 
-                        'Error: No se pudo conectar a Firebase. Verifica tu conexión a internet.';
+                    const errorDiv = document.getElementById('errorMessage');
+                    if (errorDiv) {
+                        errorDiv.classList.add('show');
+                        const errorText = document.getElementById('errorText');
+                        if (errorText) {
+                            errorText.textContent = 'Error: No se pudo conectar a Firebase. Verifica tu conexión a internet.';
+                        }
+                    }
                 }
             }, 2000);
         });
 
+            // Verificar que Firebase se cargó - con timeout más generoso para módulos
+            window.addEventListener('load', function() {
+                console.log('🔍 Verificando Firebase...');
+            
+                // Esperar hasta 5 segundos para que firebase-config módulo inicialice
+                let checkAttempts = 0;
+                const maxAttempts = 50; // 5 segundos con intervalo de 100ms
+            
+                const checkFirebase = setInterval(() => {
+                    checkAttempts++;
+                    console.log(`Firebase check attempt ${checkAttempts}/50`, { firebaseReady: window.firebaseReady, auth: window.auth, db: window.db });
+                
+                    if (window.firebaseReady && window.auth && window.db) {
+                        console.log('✅ Firebase está disponible');
+                        clearInterval(checkFirebase);
+                        return;
+                    }
+                
+                    if (checkAttempts >= maxAttempts) {
+                        clearInterval(checkFirebase);
+                        console.error('❌ FIREBASE NO CARGÓ después de 5 segundos');
+                        console.error('Estado:', { 
+                            firebaseReady: window.firebaseReady,
+                            auth: window.auth,
+                            db: window.db,
+                            firebaseConfig: window.__FIREBASE_CONFIG
+                        });
+                    
+                        const errorDiv = document.getElementById('errorMessage');
+                        if (errorDiv) {
+                            errorDiv.classList.add('show');
+                            const errorText = document.getElementById('errorText');
+                            if (errorText) {
+                                errorText.textContent = 'Error: No se pudo conectar a Firebase. Abre la consola (F12) para más detalles.';
+                            }
+                        }
+                    }
+                }, 100);
+            });
+
         // Activar modo desarrollo en localhost
         if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-            document.getElementById('devMode').classList.add('show');
+            const devModeEl = document.getElementById('devMode');
+            if (devModeEl) {
+                devModeEl.classList.add('show');
+            }
         }
 
         // Manejar formulario de login
@@ -352,7 +412,7 @@
             const loginBtn = document.getElementById('loginBtn');
             
             // Verificar que Firebase esté disponible
-            if (typeof firebase === 'undefined' || !firebase.apps.length) {
+                if (!window.firebaseReady || !window.auth) {
                 errorDiv.classList.add('show');
                 document.getElementById('errorText').textContent = 'Error: Firebase no está disponible. Recarga la página.';
                 return;
@@ -397,8 +457,13 @@
             }
 
             try {
-                const user = firebase.auth().currentUser;
-                const result = await changePassword(user.uid, newPassword);
+                const currentUser = getCurrentUser();
+                if (!currentUser) {
+                    alert('❌ Usuario no autenticado');
+                    return;
+                }
+
+                const result = await changePassword(currentUser.uid, newPassword);
                 
                 if (result.success) {
                     alert('✅ Contraseña actualizada. Redirigiendo...');
@@ -412,7 +477,7 @@
         });
 
         document.getElementById('btnCancelChangePassword').addEventListener('click', function() {
-            firebase.auth().signOut();
+            logoutUser();
         });
     </script>
 </body>

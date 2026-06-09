@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, g, abort
-from datetime import datetime
+from datetime import datetime, timedelta
 import firebase_config as fb
 import firebase_auth as fa
 import firebase_admin
@@ -60,6 +60,16 @@ def _authenticate_from_session():
 
     return _build_current_user(uid, perfil=perfil)
 
+
+def _persist_session_from_profile(uid, perfil, decoded_token=None):
+    """Persist Flask session state from a verified Firebase user profile."""
+    session.permanent = True
+    session['user_uid'] = uid
+    session['user_role'] = (perfil.get('rol') or '').lower()
+    session['user_name'] = perfil.get('nombre')
+    session['user_email'] = perfil.get('email')
+    return _build_current_user(uid, decoded_token=decoded_token, perfil=perfil)
+
 # Configurar logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -71,6 +81,11 @@ app.config['SECRET_KEY'] = os.environ['FLASK_SECRET_KEY']
 app.config['SESSION_COOKIE_SAMESITE'] = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
 app.config['SESSION_COOKIE_SECURE'] = not _is_local_development()
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_PATH'] = '/'
+session_cookie_domain = os.getenv('SESSION_COOKIE_DOMAIN')
+if session_cookie_domain:
+    app.config['SESSION_COOKIE_DOMAIN'] = session_cookie_domain
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=int(os.getenv('SESSION_LIFETIME_DAYS', '7')))
 
 
 @app.after_request
@@ -120,7 +135,7 @@ def login_required(f):
         if current_user is None:
             if request.path.startswith('/api/'):
                 return jsonify({'success': False, 'error': 'Se requiere un token de acceso'}), 401
-            abort(401, description='Se requiere un token de acceso')
+            return redirect('/login')
 
         return f(*args, **kwargs)
     return decorated_function
@@ -134,13 +149,13 @@ def admin_required(f):
         if not current_user:
             if request.path.startswith('/api/'):
                 return jsonify({'success': False, 'error': 'Autenticación requerida'}), 401
-            abort(401, description='Autenticación requerida')
+            return redirect('/login')
 
         role = (current_user.get('token', {}).get('role') or current_user.get('role') or current_user.get('profile', {}).get('rol') or '').lower()
         if role != 'admin':
             if request.path.startswith('/api/'):
                 return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
-            abort(403, description='Acceso denegado')
+            return redirect('/')
         return f(*args, **kwargs)
 
     return decorated_function
@@ -181,10 +196,12 @@ def login():
     return render_template('login.html')
 
 # Ruta de Logout
-@app.route('/logout')
-@login_required
+@app.route('/logout', methods=['GET', 'POST'])
 def logout():
-    # El logout se maneja en el frontend con Firebase
+    if request.method == 'POST':
+        session.clear()
+        return jsonify({'success': True, 'message': 'Sesión cerrada'})
+
     session.clear()
     return redirect('/login')
 
@@ -403,6 +420,46 @@ def check_user_status():
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/login_session', methods=['POST'])
+def login_session():
+    """Verify a Firebase ID token and atomically populate Flask session state."""
+    try:
+        data = request.get_json(silent=True) or {}
+        id_token = None
+
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            id_token = auth_header.split(' ', 1)[1].strip()
+
+        if not id_token:
+            id_token = data.get('idToken')
+
+        if not id_token:
+            return jsonify({'success': False, 'error': 'No ID token provided'}), 401
+
+        decoded = firebase_admin.auth.verify_id_token(id_token, check_revoked=True)
+        uid = decoded.get('uid')
+        if not uid:
+            return jsonify({'success': False, 'error': 'Invalid token'}), 401
+
+        perfil = fa.obtener_usuario_por_uid(uid)
+        if not perfil:
+            return jsonify({'success': False, 'error': 'Perfil no encontrado'}), 404
+
+        if not perfil.get('activo', True):
+            session.clear()
+            return jsonify({'success': False, 'error': 'Tu cuenta está desactivada'}), 403
+
+        perfil_safe = _safe_profile_dict(perfil)
+        perfil_safe['uid'] = uid
+        _persist_session_from_profile(uid, perfil_safe, decoded_token=decoded)
+
+        return jsonify({'success': True, 'uid': uid, 'usuario': perfil_safe}), 200
+    except Exception as e:
+        logger.exception('Error sincronizando sesión Flask/Firebase')
+        return jsonify({'success': False, 'error': str(e)}), 401
 
 # API: Obtener todas las sucursales
 @app.route('/api/sucursales', methods=['GET'])
@@ -1027,9 +1084,7 @@ def api_me():
                     perfil_safe[k] = v
 
             # Populate server session
-            session['user_uid'] = uid
-            session['user_role'] = (perfil_safe.get('rol') or '').lower()
-            session['user_name'] = perfil_safe.get('nombre')
+            _persist_session_from_profile(uid, perfil_safe, decoded_token=decoded)
             logger.info(f"Session populated for uid={uid} role={session.get('user_role')}")
             logger.info(f"Session keys now: {list(session.keys())}")
 
