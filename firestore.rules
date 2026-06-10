@@ -36,7 +36,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isAdmin() &&
                        request.resource.data.rol in ['admin', 'empleado'] &&
                        request.resource.data.sucursal_id in ['S1', 'S2', 'S3', 'S4'] &&
-                       request.resource.data.keys().hasAll(['nombre', 'email', 'rol', 'sucursal_id']);
+                       request.resource.data.keys().hasAll(['nombre', 'email', 'celular', 'rol', 'sucursal_id']);
       
       // Actualización: 
       // - El usuario puede actualizar su propio perfil (solo ciertos campos)

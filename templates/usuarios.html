@@ -38,7 +38,7 @@
             </select>
         </div>
         <div class="filter-group">
-            <input type="text" id="searchInput" class="filter-input" placeholder="Buscar por nombre o email...">
+            <input type="text" id="searchInput" class="filter-input" placeholder="Buscar por nombre, email o celular...">
         </div>
     </div>
 
@@ -48,6 +48,7 @@
             <div class="table-row">
                 <div class="table-cell header">Usuario</div>
                 <div class="table-cell header">Email</div>
+                <div class="table-cell header">Celular</div>
                 <div class="table-cell header">Rol</div>
                 <div class="table-cell header">Sucursal</div>
                 <div class="table-cell header">Estado</div>
@@ -94,6 +95,10 @@
                     <div class="form-group">
                         <label class="form-label" for="detailEmail">Email</label>
                         <input type="email" id="detailEmail" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="detailCelular">Celular</label>
+                        <input type="tel" id="detailCelular" class="form-input" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="detailRole">Rol</label>
@@ -284,7 +289,7 @@ input:checked + .slider:before {
 
 .table-row {
     display: grid;
-    grid-template-columns: 200px 220px 120px 120px 100px 100px;
+    grid-template-columns: 200px 220px 140px 120px 120px 100px 100px;
     gap: 0;
     padding: 0;
     border-bottom: 1px solid var(--border-color);
@@ -510,7 +515,7 @@ input:checked + .slider:before {
 
 @media (max-width: 1024px) {
     .table-row {
-        grid-template-columns: 150px 180px 100px 100px 80px 80px;
+        grid-template-columns: 150px 180px 110px 100px 100px 80px 80px;
     }
 
     .table-cell {
@@ -684,6 +689,7 @@ function renderUsers(usuarios) {
         const userId = escapeHTML(user.id || user.uid);
         const userName = escapeHTML(user.nombre);
         const userEmail = escapeHTML(user.email);
+        const userCelular = escapeHTML(user.celular || 'No registrado');
         const userRole = escapeHTML(user.rol);
         const userActiveClass = user.activo ? '' : 'inactive';
         const userActiveText = user.activo ? 'Activo' : 'Inactivo';
@@ -700,6 +706,9 @@ function renderUsers(usuarios) {
             </div>
             <div class="table-cell" data-label="Email">
                 ${userEmail}
+            </div>
+            <div class="table-cell" data-label="Celular">
+                ${userCelular}
             </div>
             <div class="table-cell" data-label="Rol">
                 <span class="role-badge">${userRole}</span>
@@ -749,6 +758,7 @@ function showUserDetail(uid) {
     document.getElementById('detailUid').value = uid;
     document.getElementById('detailName').value = user.nombre || '';
     document.getElementById('detailEmail').value = user.email || '';
+    document.getElementById('detailCelular').value = user.celular || '';
     document.getElementById('detailRole').value = user.rol || 'vendedor';
     document.getElementById('detailSucursal').value = user.sucursal_id || '';
     
@@ -789,6 +799,7 @@ document.getElementById('btnUpdateUser').addEventListener('click', async functio
         const data = {
             nombre: document.getElementById('detailName').value,
             email: document.getElementById('detailEmail').value,
+            celular: document.getElementById('detailCelular').value,
             rol: document.getElementById('detailRole').value,
             sucursal_id: document.getElementById('detailSucursal').value,
             activo: document.getElementById('detailActivoSwitch').checked

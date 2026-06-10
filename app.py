@@ -226,16 +226,17 @@ def crear_empleado():
     try:
         nombre = request.form.get('nombre')
         email = request.form.get('email')
+        celular = request.form.get('celular')
         rol = request.form.get('rol')
         sucursal_id = request.form.get('sucursal')
         password = request.form.get('password')
         
         # Validaciones
-        if not all([nombre, email, rol, sucursal_id, password]):
+        if not all([nombre, email, celular, rol, sucursal_id, password]):
             return jsonify({'success': False, 'error': 'Todos los campos son obligatorios'}), 400
         
         # Crear usuario
-        resultado = fa.crear_usuario_empleado(email, password, nombre, rol, sucursal_id)
+        resultado = fa.crear_usuario_empleado(email, password, nombre, rol, sucursal_id, celular)
         
         if resultado['success']:
             return jsonify({
@@ -290,6 +291,7 @@ def obtener_usuarios():
             u['sucursal_id'] = str(u.get('sucursal_id') or '')
             u['nombre'] = u.get('nombre') or ''
             u['email'] = u.get('email') or ''
+            u['celular'] = u.get('celular') or ''
             normalized.append(u)
 
         # Apply filters
@@ -300,7 +302,7 @@ def obtener_usuarios():
         if search:
             normalized = [
                 u for u in normalized
-                if search in u.get('nombre', '').lower() or search in u.get('email', '').lower()
+                if search in u.get('nombre', '').lower() or search in u.get('email', '').lower() or search in u.get('celular', '').lower()
             ]
 
         # Sort by creation date desc (fallback 0)

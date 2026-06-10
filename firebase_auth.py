@@ -12,7 +12,7 @@ load_dotenv()
 # Usar el cliente de Firestore ya inicializado
 from firebase_config import db
 
-def crear_usuario_empleado(email, password, nombre, rol, sucursal_id):
+def crear_usuario_empleado(email, password, nombre, rol, sucursal_id, celular=None):
     """
     Crea un nuevo usuario en Firebase Auth y su perfil en Firestore
     
@@ -46,6 +46,7 @@ def crear_usuario_empleado(email, password, nombre, rol, sucursal_id):
         db.collection('usuarios').document(user.uid).set({
             'nombre': nombre,
             'email': email,
+            'celular': celular or '',
             'rol': rol,
             'sucursal_id': sucursal_id,
             'fecha_creacion': datetime.utcnow(),
@@ -161,7 +162,7 @@ def actualizar_usuario(uid, datos):
     """
     try:
         # Campos permitidos para actualización en Firestore
-        campos_firestore = ['nombre', 'rol', 'sucursal_id', 'activo']
+        campos_firestore = ['nombre', 'email', 'celular', 'rol', 'sucursal_id', 'activo']
         datos_firestore = {k: v for k, v in datos.items() if k in campos_firestore}
         
         # Asegurarse de que 'activo' sea un booleano
@@ -169,7 +170,7 @@ def actualizar_usuario(uid, datos):
             datos_firestore['activo'] = bool(datos_firestore['activo'])
 
         email_nuevo = datos.get('email')
-        
+
         # 1. Actualizar Auth (si hay email nuevo)
         if email_nuevo:
             auth.update_user(uid, email=email_nuevo)
@@ -197,7 +198,7 @@ def actualizar_perfil_usuario(uid, datos):
     """
     try:
         # Campos permitidos para actualización
-        campos_permitidos = ['nombre', 'debeCambiarPassword', 'sucursal_id']
+        campos_permitidos = ['nombre', 'celular', 'debeCambiarPassword', 'sucursal_id']
         datos_filtrados = {k: v for k, v in datos.items() if k in campos_permitidos}
         
         if not datos_filtrados:

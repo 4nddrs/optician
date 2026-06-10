@@ -60,6 +60,21 @@
                 >
             </div>
 
+            <!-- Celular -->
+            <div class="form-group">
+                <label class="form-label" for="celular">
+                    <i class="fas fa-phone"></i> Celular
+                </label>
+                <input 
+                    type="tel" 
+                    id="celular" 
+                    name="celular" 
+                    class="form-input" 
+                    placeholder="Ej: 78512345"
+                    required
+                >
+            </div>
+
             <!-- Sucursal -->
             <div class="form-group">
                 <label class="form-label" for="sucursal">
@@ -89,7 +104,7 @@
             <!-- Contraseña Temporal -->
             <div class="form-group">
                 <label class="form-label" for="password">
-                    <i class="fas fa-key"></i> Contraseña Temporal
+                    <i class="fas fa-key"></i> Contraseña
                 </label>
                 <div style="display: flex; gap: 0.5rem;">
                     <input 
@@ -108,18 +123,18 @@
                         <i class="fas fa-copy"></i>
                     </button>                </div>
                 <small style="color: var(--text-secondary); margin-top: 0.25rem; display: block;">
-                    Mínimo 6 caracteres. El empleado la cambiará en su primer login.
+                    Mínimo 6 caracteres.
                 </small>
             </div>
 
             <!-- Info Box -->
-            <div class="info-box">
+            <!-- <div class="info-box">
                 <i class="fas fa-info-circle"></i>
                 <div>
                     <strong>Importante:</strong>
                     <p>El empleado deberá cambiar su contraseña en el primer acceso. Se mostrará un modal obligatorio para establecer su contraseña personal.</p>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Buttons -->
             <div class="form-buttons">
@@ -131,6 +146,24 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal de confirmación WhatsApp -->
+<div id="whatsappModal" class="modal-backdrop">
+    <div class="modal whatsapp-modal-panel" style="max-width: 540px;">
+        <div class="modal-header">
+            <h2>Enviar credenciales por WhatsApp?</h2>
+        </div>
+        <div class="modal-body">
+            <p style="margin: 0; color: var(--text-secondary); line-height: 1.6;">
+                Deseas enviar las credenciales del nuevo empleado por WhatsApp ahora?
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" id="rejectWhatsappBtn">Rechazar</button>
+            <button type="button" class="btn-primary" id="acceptWhatsappBtn">Aceptar</button>
+        </div>
     </div>
 </div>
 
@@ -301,6 +334,40 @@ select option {
     cursor: not-allowed;
 }
 
+#whatsappModal.modal-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    align-items: center;
+    justify-content: center;
+    z-index: 4100;
+}
+
+#whatsappModal.show {
+    display: flex;
+}
+
+#whatsappModal .whatsapp-modal-panel {
+    display: block;
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    max-width: 540px;
+    height: auto;
+    background: var(--surface-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: var(--spacing-md);
@@ -355,6 +422,55 @@ window.addEventListener('load', function() {
     document.getElementById('generatePassword').click();
 });
 
+function normalizeWhatsAppNumber(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (!digits) return '';
+    return digits.startsWith('591') ? digits : `591${digits}`;
+}
+
+function buildWhatsappMessage({ nombre, email, password }) {
+    return `Hola ${nombre},\n\nBienvenido(a) al sistema de Óptica V-CLARO.\n\nSus credenciales de acceso son las siguientes:\n• Correo electrónico: ${email}\n• Contraseña: ${password}\n\nPuede ingresar al sistema desde este enlace:\nhttps://v-claro.fly.dev/\n\n\n\nSi tiene alguna duda, estamos a su disposición.\nLe recomendamos usar un gestor de contraseñas para mantener sus credenciales seguras y le sea mas facil ingresar al sistema.\n\nSaludos cordiales,\nÓptica V-CLARO`;
+}
+
+function openWhatsappCredentials(employeeData) {
+    const phone = normalizeWhatsAppNumber(employeeData.celular);
+    if (!phone) {
+        alert('No se pudo enviar por WhatsApp porque el celular no es válido.');
+        return;
+    }
+
+    const message = buildWhatsappMessage(employeeData);
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function showWhatsappModal(employeeData) {
+    const modal = document.getElementById('whatsappModal');
+    const acceptBtn = document.getElementById('acceptWhatsappBtn');
+    const rejectBtn = document.getElementById('rejectWhatsappBtn');
+
+    if (!modal || !acceptBtn || !rejectBtn) return;
+
+    modal.classList.add('show');
+
+    const closeModal = () => {
+        modal.classList.remove('show');
+        acceptBtn.onclick = null;
+        rejectBtn.onclick = null;
+    };
+
+    acceptBtn.onclick = () => {
+        closeModal();
+        openWhatsappCredentials(employeeData);
+        window.location.href = '/usuarios';
+    };
+
+    rejectBtn.onclick = () => {
+        closeModal();
+        window.location.href = '/usuarios';
+    };
+}
+
 // Manejar envío del formulario
 document.getElementById('altaEmpleadoForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -370,6 +486,13 @@ document.getElementById('altaEmpleadoForm').addEventListener('submit', async fun
     try {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Creando...</span>';
+
+        const employeeData = {
+            nombre: document.getElementById('nombre').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            celular: document.getElementById('celular').value.trim(),
+            password: document.getElementById('password').value
+        };
         
         const formData = new FormData(this);
         const response = await fetch('/api/empleados/crear', {
@@ -381,11 +504,11 @@ document.getElementById('altaEmpleadoForm').addEventListener('submit', async fun
         
         if (data.success) {
             successDiv.style.display = 'flex';
-            document.getElementById('successText').textContent = 'Empleado creado exitosamente. Redirigiendo...';
-            
+            document.getElementById('successText').textContent = 'Empleado creado exitosamente.';
+
             setTimeout(() => {
-                window.location.href = '/usuarios';
-            }, 2000);
+                showWhatsappModal(employeeData);
+            }, 400);
         } else {
             errorDiv.style.display = 'flex';
             document.getElementById('errorText').textContent = data.error || 'Error al crear empleado';
