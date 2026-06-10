@@ -158,10 +158,11 @@ function initAuth() {
                             redirectAfterLogin(userProfile);
                         }
 
-                        // Verificar si debe cambiar contraseña
-                        if (userProfile.debeCambiarPassword && !isLoginPage() && !isChangePasswordPage()) {
-                            showChangePasswordModal(user.uid);
-                        }
+                        // Cambio de contraseña deshabilitado temporalmente.
+                        // Se conserva lógica comentada para reactivarla cuando sea necesario.
+                        // if (userProfile.debeCambiarPassword && !isLoginPage() && !isChangePasswordPage()) {
+                        //     showChangePasswordModal(user.uid);
+                        // }
                     } else {
                         console.warn('⚠️ Usuario autenticado pero sin perfil en Firestore');
                         if (isLoginPage()) {
@@ -282,6 +283,7 @@ async function loginWithEmail(email, password) {
  * Cambiar contraseña del usuario
  */
 async function changePassword(uid, newPassword) {
+    /*
     try {
         await waitForFirebaseReady();
 
@@ -314,6 +316,9 @@ async function changePassword(uid, newPassword) {
 
         return { success: false, error: errorMessage };
     }
+    */
+
+    return { success: false, error: 'Cambio de contraseña deshabilitado temporalmente' };
 }
 
 /**
@@ -400,13 +405,15 @@ function isLoginPage() {
  * Verificar si está en página de cambio de contraseña
  */
 function isChangePasswordPage() {
-    return window.location.pathname === '/cambiar-contrasena';
+    // return window.location.pathname === '/cambiar-contrasena';
+    return false;
 }
 
 /**
  * Mostrar modal de cambio de contraseña obligatorio
  */
 function showChangePasswordModal(uid) {
+    /*
     const modal = document.getElementById('changePasswordModal');
     if (modal) {
         modal.style.display = 'flex';
@@ -437,12 +444,15 @@ function showChangePasswordModal(uid) {
             };
         }
     }
+    */
+    void uid;
 }
 
 /**
  * Mostrar error en modal
  */
 function showModalError(message) {
+    /*
     const errorDiv = document.getElementById('modalError');
     if (errorDiv) {
         errorDiv.style.display = 'flex';
@@ -451,6 +461,8 @@ function showModalError(message) {
             errorText.textContent = message;
         }
     }
+    */
+    void message;
 }
 
 /**

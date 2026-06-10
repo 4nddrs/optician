@@ -69,9 +69,11 @@
 
         <!-- Botones de Acción -->
         <div class="profile-actions">
+            <!--
             <button class="btn-primary" id="changePasswordBtn">
                 <i class="fas fa-lock"></i> Cambiar Contraseña
             </button>
+            -->
         </div>
     </div>
 
@@ -102,7 +104,8 @@
     </div>
 </div>
 
-<!-- Modal Cambiar Contraseña -->
+<!-- Modal Cambiar Contraseña (deshabilitado temporalmente) -->
+<!--
 <div id="changePasswordModal" class="modal-backdrop" style="display: none;">
     <div class="modal" style="max-width: 500px;">
         <div class="modal-header">
@@ -160,6 +163,7 @@
         </div>
     </div>
 </div>
+-->
 
 <style>
 .container {
@@ -582,7 +586,8 @@ async function loadProfile() {
     }
 }
 
-// Cambiar contraseña
+// Cambiar contraseña (deshabilitado temporalmente)
+/*
 document.getElementById('changePasswordBtn').addEventListener('click', function() {
     document.getElementById('changePasswordModal').style.display = 'flex';
 });
@@ -630,6 +635,7 @@ document.getElementById('btnConfirmChangePassword').addEventListener('click', as
         document.getElementById('modalErrorText').textContent = 'Error de conexión';
     }
 });
+*/
 
 // Guardar sucursal seleccionada
 document.getElementById('saveSucursalBtn').addEventListener('click', function() {
@@ -643,30 +649,28 @@ document.getElementById('logoutBtn').addEventListener('click', function() {
     logoutUser();
 });
 
-// Cargar perfil al abrir
-function setupPerfilAuthListener() {
-    const user = getCurrentUser();
-    if (user) {
-        loadProfile();
-    } else {
-        window.location.href = '/login';
+async function bootstrapPerfilPage() {
+    const deadline = Date.now() + 6000;
+
+    while (Date.now() < deadline) {
+        if (typeof getCurrentUser === 'function') {
+            const user = getCurrentUser();
+            if (user) {
+                await loadProfile();
+                return;
+            }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
+
+    window.location.href = '/login';
 }
 
-// Esperar a que auth.js inicialice
-const checkAuthInterval = setInterval(() => {
-    if (typeof getCurrentUser === 'function') {
-        clearInterval(checkAuthInterval);
-        setupPerfilAuthListener();
-    }
-}, 100);
-
-// Timeout de seguridad
-setTimeout(() => {
-    clearInterval(checkAuthInterval);
-    if (typeof getCurrentUser === 'function') {
-        setupPerfilAuthListener();
-    }
-}, 3000);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrapPerfilPage);
+} else {
+    bootstrapPerfilPage();
+}
 </script>
 {% endblock %}
