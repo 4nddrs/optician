@@ -535,6 +535,104 @@ body {
     color: var(--color-primary-light);
 }
 
+@media (max-width: 768px) {
+    .orders-mobile-table,
+    .dashboard-orders-table {
+        border-collapse: separate;
+        border-spacing: 0 0.85rem;
+    }
+
+    .orders-mobile-table thead,
+    .dashboard-orders-table thead {
+        display: none;
+    }
+
+    .orders-mobile-table tbody,
+    .dashboard-orders-table tbody {
+        display: block;
+    }
+
+    .orders-mobile-table tbody tr,
+    .dashboard-orders-table tbody tr {
+        display: block;
+        margin-bottom: 0;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+
+    .orders-mobile-table tbody tr:hover,
+    .dashboard-orders-table tbody tr:hover {
+        background: var(--surface-primary);
+    }
+
+    .orders-mobile-table td,
+    .dashboard-orders-table td {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid rgba(139, 92, 246, 0.12);
+        white-space: normal;
+        overflow: visible;
+        text-overflow: initial;
+    }
+
+    .orders-mobile-table td:last-child,
+    .dashboard-orders-table td:last-child {
+        border-bottom: none;
+    }
+
+    .orders-mobile-table td::before,
+    .dashboard-orders-table td::before {
+        content: attr(data-label);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+    }
+
+    .orders-mobile-table td strong,
+    .dashboard-orders-table td strong {
+        font-size: 1rem;
+    }
+
+    .orders-mobile-table td[data-label="Acciones"],
+    .dashboard-orders-table td[data-label="Acciones"] {
+        align-items: flex-start;
+    }
+
+    .orders-mobile-table td[data-label="Acciones"]::before,
+    .dashboard-orders-table td[data-label="Acciones"]::before {
+        margin-bottom: 0.4rem;
+    }
+
+    .orders-mobile-table .action-buttons {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .dashboard-orders-table .btn-icon.view {
+        align-self: flex-start;
+    }
+
+    .orders-mobile-table td[colspan],
+    .dashboard-orders-table td[colspan] {
+        display: block;
+        text-align: center;
+        padding: 1.25rem 1rem;
+    }
+
+    .orders-mobile-table td[colspan]::before,
+    .dashboard-orders-table td[colspan]::before {
+        display: none;
+    }
+}
+
 .text-center {
     text-align: center;
 }

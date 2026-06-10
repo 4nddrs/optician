@@ -67,7 +67,7 @@
     </div>
     
     <div class="table-container">
-        <table class="data-table">
+        <table class="data-table dashboard-orders-table">
             <thead>
                 <tr>
                     <th>ID Orden</th>
@@ -83,18 +83,18 @@
             <tbody>
                 {% for orden in ordenes %}
                 <tr>
-                    <td><strong>{{ orden.id_orden }}</strong></td>
-                    <td>{{ orden.id_sucursal }}</td>
-                    <td>{{ clientes_dict.get(orden.id_cliente, {}).get('nombre_completo', orden.id_cliente) }}</td>
-                    <td>{{ orden.fecha_creacion[:10] }}</td>
-                    <td>{{ orden.fecha_entrega }}</td>
-                    <td>
+                    <td data-label="ID Orden"><strong>{{ orden.id_orden }}</strong></td>
+                    <td data-label="Sucursal">{{ orden.id_sucursal }}</td>
+                    <td data-label="Cliente">{{ clientes_dict.get(orden.id_cliente, {}).get('nombre_completo', orden.id_cliente) }}</td>
+                    <td data-label="Fecha Creación">{{ orden.fecha_creacion[:10] }}</td>
+                    <td data-label="Fecha Entrega">{{ orden.fecha_entrega }}</td>
+                    <td data-label="Estado">
                         <span class="badge badge-{{ orden.estado }}">
                             {{ orden.estado }}
                         </span>
                     </td>
-                    <td>Bs. {{ orden.pagos.total }}</td>
-                    <td>
+                    <td data-label="Total">Bs. {{ orden.pagos.total }}</td>
+                    <td data-label="Acciones">
                         <a href="{{ url_for('ver_orden', orden_id=orden.id) }}" class="btn-icon view" title="Ver detalles">
                             <i class="fas fa-eye"></i>
                         </a>
