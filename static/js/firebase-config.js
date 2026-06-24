@@ -4,7 +4,7 @@
  */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js';
-import { getAuth, setPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js';
+import { getAuth, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.7.2/firebase-auth.js';
 import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore.js';
 
 // Estados globales
@@ -61,10 +61,10 @@ function initializeFirebaseApp() {
         db = getFirestore(firebaseApp);
         console.log('✅ Firestore obtenido');
 
-        // Configurar persistencia de sesión
-        setPersistence(auth, browserSessionPersistence)
+        // Configurar persistencia de sesión (localStorage para mantener sesión entre pestañas)
+        setPersistence(auth, browserLocalPersistence)
             .then(() => {
-                console.log('✅ Persistencia de sesión configurada (browserSessionPersistence)');
+                console.log('✅ Persistencia de sesión configurada (browserLocalPersistence)');
             })
             .catch((error) => {
                 console.error('⚠️ Error configurando persistencia:', error);

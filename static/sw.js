@@ -44,6 +44,11 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // No interceptar descargas de PDF para evitar problemas con streams binarios
+  if (event.request.url.includes('/descargar-pdf')) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then(response => {

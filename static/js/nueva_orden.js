@@ -95,16 +95,11 @@ async function buscarClientesEnVivo(query) {
         const result = await response.json();
 
         if (result.success) {
-            if (result.cliente) {
-                fillClientFields(result.cliente, false);
-            }
-
-            if (result.clientes && result.clientes.length > 1) {
+            if (result.clientes && result.clientes.length > 0) {
                 renderClientSuggestions(result.clientes);
-            } else if (result.clientes && result.clientes.length === 1 && !result.cliente) {
-                renderClientSuggestions(result.clientes);
-            } else if (!result.cliente) {
+            } else {
                 hideClientSuggestions();
+                clearClientSelection({ keepQuery: true });
             }
         } else {
             hideClientSuggestions();
@@ -404,4 +399,115 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+});
+
+// Dynamic form for lens specifications
+const materialOptions = {
+    organico: [
+        { value: 'blanco', label: 'Blanco' },
+        { value: 'antireflex', label: 'Antireflex' },
+        { value: 'blue_blocker', label: 'Blue Bloker' },
+        { value: 'blue_care', label: 'Blue Care' },
+        { value: 'blue_verde', label: 'Blue Verde' },
+        { value: 'fotocr_ar', label: 'Fotocr. AR' },
+        { value: 'fotocr_blue', label: 'Fotocr. Blue' },
+        { value: 'transitions', label: 'Transitions' }
+    ],
+    policarbonato: [
+        { value: 'blanco', label: 'Blanco' },
+        { value: 'antireflex', label: 'Antireflex' },
+        { value: 'blue_blocker', label: 'Blue Bloker' },
+        { value: 'blue_care', label: 'Blue Care' },
+        { value: 'blue_verde', label: 'Blue Verde' },
+        { value: 'fotocr_ar', label: 'Fotocr. AR' },
+        { value: 'fotocr_blue', label: 'Fotocr. Blue' },
+        { value: 'transitions', label: 'Transitions' }
+    ],
+    vidrio: [
+        { value: 'blanco', label: 'Blanco' },
+        { value: 'fotocromatico', label: 'Fotocromático' }
+    ]
+};
+
+const modeloMultifocalOptions = {
+    kodak: [
+        { value: 'unique_hd', label: 'Unique HD' },
+        { value: 'easy', label: 'Easy' },
+        { value: 'precise', label: 'Precise' }
+    ],
+    varilux: [
+        { value: 'physio_30', label: 'Physio 30' },
+        { value: 'physio', label: 'Physio' },
+        { value: 'confort', label: 'Confort' },
+        { value: 'dynamic', label: 'Dynamic' }
+    ],
+    evolution_xperience: [
+        { value: 'evolution_essential', label: 'Evolution Essential' },
+        { value: 'evolution_pro', label: 'Evolution Pro' },
+        { value: 'evolution_pro_2_0', label: 'Evolution Pro 2.0' },
+        { value: 'xperience_ia', label: 'Xperience IA' }
+    ]
+};
+
+function actualizarMaterialDetalle() {
+    const base = document.getElementById('material_base').value;
+    const grupoDetalle = document.getElementById('grupo_material_detalle');
+    const grupoOtro = document.getElementById('grupo_material_otro');
+    const selectDetalle = document.getElementById('material_detalle');
+
+    grupoDetalle.style.display = 'none';
+    grupoOtro.style.display = 'none';
+
+    if (base === 'otro') {
+        grupoOtro.style.display = 'block';
+    } else if (base && materialOptions[base]) {
+        grupoDetalle.style.display = 'block';
+        selectDetalle.innerHTML = '<option value="">Seleccione...</option>';
+        materialOptions[base].forEach(function(opt) {
+            selectDetalle.innerHTML += '<option value="' + opt.value + '">' + opt.label + '</option>';
+        });
+    }
+}
+
+function actualizarDisenoLente() {
+    const tipo = document.getElementById('tipo_lente').value;
+    const grupoBifocal = document.getElementById('grupo_diseno_bifocal');
+    const grupoMarca = document.getElementById('grupo_marca_multifocal');
+    const grupoModelo = document.getElementById('grupo_modelo_multifocal');
+
+    grupoBifocal.style.display = 'none';
+    grupoMarca.style.display = 'none';
+    grupoModelo.style.display = 'none';
+
+    if (tipo === 'bifocal') {
+        grupoBifocal.style.display = 'block';
+    } else if (tipo === 'multifocal') {
+        grupoMarca.style.display = 'block';
+    }
+}
+
+function actualizarModeloMultifocal() {
+    const marca = document.getElementById('marca_multifocal').value;
+    const grupoModelo = document.getElementById('grupo_modelo_multifocal');
+    const selectModelo = document.getElementById('modelo_multifocal');
+
+    if (marca && modeloMultifocalOptions[marca]) {
+        grupoModelo.style.display = 'block';
+        selectModelo.innerHTML = '<option value="">Seleccione...</option>';
+        modeloMultifocalOptions[marca].forEach(function(opt) {
+            selectModelo.innerHTML += '<option value="' + opt.value + '">' + opt.label + '</option>';
+        });
+    } else {
+        grupoModelo.style.display = 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const materialBase = document.getElementById('material_base');
+    const tipoLente = document.getElementById('tipo_lente');
+    const marcaMultifocal = document.getElementById('marca_multifocal');
+
+    if (materialBase) materialBase.addEventListener('change', actualizarMaterialDetalle);
+    if (tipoLente) tipoLente.addEventListener('change', actualizarDisenoLente);
+    if (marcaMultifocal) marcaMultifocal.addEventListener('change', actualizarModeloMultifocal);
 });

@@ -91,20 +91,48 @@
                 <h3 class="text-xl font-bold text-white mb-6">Especificaciones y Montura</h3>
                 <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Material Base</dt>
+                        <dd class="text-white font-medium">{{ orden.especificaciones.material_base | title if orden.especificaciones.material_base else 'N/A' }}</dd>
+                    </div>
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Detalle del Material</dt>
+                        <dd class="text-white font-medium">
+                            {% if orden.especificaciones.material_base == 'otro' %}
+                                {{ orden.especificaciones.material_otro or 'N/A' }}
+                            {% else %}
+                                {{ orden.especificaciones.material_detalle | title if orden.especificaciones.material_detalle else 'N/A' }}
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div class="flex flex-col">
                         <dt class="text-sm text-gray-400">Tipo de Lente</dt>
-                        <dd class="text-white font-medium">{{ orden.especificaciones.tipo_lente }}</dd>
+                        <dd class="text-white font-medium">{{ orden.especificaciones.tipo_lente | title if orden.especificaciones.tipo_lente else 'N/A' }}</dd>
                     </div>
                     <div class="flex flex-col">
-                        <dt class="text-sm text-gray-400">Material</dt>
-                        <dd class="text-white font-medium">{{ orden.especificaciones.material }}</dd>
+                        <dt class="text-sm text-gray-400">
+                            {% if orden.especificaciones.tipo_lente == 'bifocal' %}
+                                Diseño Bifocal
+                            {% elif orden.especificaciones.tipo_lente == 'multifocal' %}
+                                Marca Multifocal
+                            {% endif %}
+                        </dt>
+                        <dd class="text-white font-medium">
+                            {% if orden.especificaciones.tipo_lente == 'bifocal' %}
+                                {{ orden.especificaciones.diseno_bifocal | replace('_', ' ') | title if orden.especificaciones.diseno_bifocal else 'N/A' }}
+                            {% elif orden.especificaciones.tipo_lente == 'multifocal' %}
+                                {{ orden.especificaciones.marca_multifocal | title if orden.especificaciones.marca_multifocal else 'N/A' }}
+                            {% endif %}
+                        </dd>
                     </div>
+                    {% if orden.especificaciones.tipo_lente == 'multifocal' and orden.especificaciones.marca_multifocal %}
                     <div class="flex flex-col">
-                        <dt class="text-sm text-gray-400">Marca de Lente</dt>
-                        <dd class="text-white font-medium">{{ orden.especificaciones.marca_lente }}</dd>
+                        <dt class="text-sm text-gray-400">Modelo Multifocal</dt>
+                        <dd class="text-white font-medium">{{ orden.especificaciones.modelo_multifocal | replace('_', ' ') | title if orden.especificaciones.modelo_multifocal else 'N/A' }}</dd>
                     </div>
+                    {% endif %}
                     <div class="flex flex-col">
                         <dt class="text-sm text-gray-400">Modelo de Montura</dt>
-                        <dd class="text-white font-medium">{{ orden.montura.modelo }}</dd>
+                        <dd class="text-white font-medium">{{ orden.montura.modelo or 'N/A' }}</dd>
                     </div>
                     <div class="md:col-span-2">
                         <dt class="text-sm text-gray-400">Tratamientos</dt>

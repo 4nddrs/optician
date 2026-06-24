@@ -144,10 +144,14 @@ Stores prescription orders with complete specifications.
   "fecha_entrega": "2026-02-10",
   "estado": "pendiente",
   "especificaciones": {
-    "material": "policarbonato",
-    "tratamientos": ["antireflex", "blue_blocker"],
+    "material_base": "organico",
+    "material_detalle": "antireflex",
+    "material_otro": "",
     "tipo_lente": "multifocal",
-    "marca_lente": "varilux_physio"
+    "diseno_bifocal": "",
+    "marca_multifocal": "varilux",
+    "modelo_multifocal": "physio_30",
+    "tratamientos": ["antireflex", "blue_blocker"]
   },
   "graduacion": {
     "lejos": {
@@ -189,10 +193,14 @@ Stores prescription orders with complete specifications.
 - `fecha_entrega` (string): Expected delivery date
 - `estado` (string): Order status (`pendiente`, `en_proceso`, `listo`, `entregado`)
 - `especificaciones` (object): Lens specifications
-  - `material` (string): Lens material
+  - `material_base` (string): Base material (`organico`, `policarbonato`, `vidrio`, `otro`)
+  - `material_detalle` (string): Material variant (e.g. `blanco`, `antireflex`, `blue_blocker`, `blue_care`, `blue_verde`, `fotocr_ar`, `fotocr_blue`, `transitions`, `fotocromatico`)
+  - `material_otro` (string): Custom material text (when `material_base` is `otro`)
+  - `tipo_lente` (string): Lens type (`bifocal`, `multifocal`)
+  - `diseno_bifocal` (string): Bifocal design (`flap_top`, `invisible`)
+  - `marca_multifocal` (string): Multifocal brand (`kodak`, `varilux`, `evolution_xperience`)
+  - `modelo_multifocal` (string): Multifocal model (`unique_hd`, `easy`, `precise`, `physio_30`, `physio`, `confort`, `dynamic`, `evolution_essential`, `evolution_pro`, `evolution_pro_2_0`, `xperience_ia`)
   - `tratamientos` (array): Applied treatments
-  - `tipo_lente` (string): Lens type
-  - `marca_lente` (string): Lens brand
 - `graduacion` (object): Prescription details
   - `lejos.od` (object): Right eye distance (OD = Oculus Dexter)
     - `esf` (number): Sphere power

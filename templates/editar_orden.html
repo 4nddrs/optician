@@ -95,33 +95,73 @@
             <h3>Especificaciones de los Lentes</h3>
         </div>
         <div class="form-grid">
+            <!-- Tipo de Material Base -->
             <div class="form-group">
-                <label for="tipo_lente">Tipo de Lente: *</label>
-                <select id="tipo_lente" name="tipo_lente" class="form-select" required>
-                    <option value="">Seleccione...</option>
-                    <option value="monofocal">Monofocal</option>
-                    <option value="bifocal">Bifocal</option>
-                    <option value="multifocal">Multifocal</option>
-                    <option value="progresivo">Progresivo</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="material">Material: *</label>
-                <select id="material" name="material" class="form-select" required>
+                <label for="material_base">Tipo de Material Base: *</label>
+                <select id="material_base" name="material_base" class="form-select" required>
                     <option value="">Seleccione...</option>
                     <option value="organico">Orgánico</option>
                     <option value="policarbonato">Policarbonato</option>
-                    <option value="high_index">High Index</option>
-                    <option value="trivex">Trivex</option>
+                    <option value="vidrio">Vidrio</option>
+                    <option value="otro">Otro material</option>
+                </select>
+            </div>
+
+            <!-- Detalle del Material (dropdown condicional) -->
+            <div class="form-group" id="grupo_material_detalle" style="display:none;">
+                <label for="material_detalle">Detalle del Material:</label>
+                <select id="material_detalle" name="material_detalle" class="form-select">
+                    <option value="">Seleccione...</option>
+                </select>
+            </div>
+
+            <!-- Otro material (texto libre) -->
+            <div class="form-group" id="grupo_material_otro" style="display:none;">
+                <label for="material_otro">Especifique el material:</label>
+                <input type="text" id="material_otro" name="material_otro" class="form-input" placeholder="Describa el material">
+            </div>
+
+            <!-- Tipo de Lente (Diseño) -->
+            <div class="form-group">
+                <label for="tipo_lente">Tipo de Lente (Diseño): *</label>
+                <select id="tipo_lente" name="tipo_lente" class="form-select" required>
+                    <option value="">Seleccione...</option>
+                    <option value="bifocal">Bifocal</option>
+                    <option value="multifocal">Multifocal</option>
+                </select>
+            </div>
+
+            <!-- Diseño Bifocal -->
+            <div class="form-group" id="grupo_diseno_bifocal" style="display:none;">
+                <label for="diseno_bifocal">Diseño Bifocal:</label>
+                <select id="diseno_bifocal" name="diseno_bifocal" class="form-select">
+                    <option value="">Seleccione...</option>
+                    <option value="flap_top">Flap Top</option>
+                    <option value="invisible">Invisible</option>
+                    <option value="digital">Digital</option>
+                </select>
+            </div>
+
+            <!-- Marca Multifocal -->
+            <div class="form-group" id="grupo_marca_multifocal" style="display:none;">
+                <label for="marca_multifocal">Marca Multifocal:</label>
+                <select id="marca_multifocal" name="marca_multifocal" class="form-select">
+                    <option value="">Seleccione...</option>
+                    <option value="kodak">Kodak</option>
+                    <option value="varilux">Varilux</option>
+                    <option value="evolution_xperience">Evolution Xperience</option>
+                </select>
+            </div>
+
+            <!-- Modelo Multifocal -->
+            <div class="form-group" id="grupo_modelo_multifocal" style="display:none;">
+                <label for="modelo_multifocal">Modelo Multifocal:</label>
+                <select id="modelo_multifocal" name="modelo_multifocal" class="form-select">
+                    <option value="">Seleccione...</option>
                 </select>
             </div>
             
-            <div class="form-group">
-                <label for="marca_lente">Marca del Lente:</label>
-                <input type="text" id="marca_lente" name="marca_lente" class="form-input" placeholder="Ej: Varilux Physio">
-            </div>
-            
+            <!-- Tratamientos -->
             <div class="form-group full-width">
                 <label>Tratamientos:</label>
                 <div class="checkbox-group">
@@ -134,16 +174,20 @@
                         <span>Blue Blocker</span>
                     </label>
                     <label class="checkbox-label">
+                        <input type="checkbox" name="tratamientos[]" value="blue_care">
+                        <span>Blue Care</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="tratamientos[]" value="blue_verde">
+                        <span>Blue Verde</span>
+                    </label>
+                    <label class="checkbox-label">
                         <input type="checkbox" name="tratamientos[]" value="transitions">
                         <span>Transitions</span>
                     </label>
                     <label class="checkbox-label">
                         <input type="checkbox" name="tratamientos[]" value="polarizado">
                         <span>Polarizado</span>
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="tratamientos[]" value="antiraya">
-                        <span>Antiraya</span>
                     </label>
                 </div>
             </div>

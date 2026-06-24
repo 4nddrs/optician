@@ -255,14 +255,33 @@
         <div class="section-title">ESPECIFICACIONES DE LENTES</div>
         
         <div class="spec-item">
+            <strong>Material Base:</strong> <span class="spec-value-title">{{ orden.especificaciones.material_base or 'N/A' }}</span>
+        </div>
+        <div class="spec-item">
+            <strong>Detalle:</strong> <span class="spec-value-title">
+                {% if orden.especificaciones.material_base == 'otro' %}
+                    {{ orden.especificaciones.material_otro or 'N/A' }}
+                {% else %}
+                    {{ orden.especificaciones.material_detalle or 'N/A' }}
+                {% endif %}
+            </span>
+        </div>
+        <div class="spec-item">
             <strong>Tipo:</strong> <span class="spec-value-title">{{ orden.especificaciones.tipo_lente or 'N/A' }}</span>
         </div>
+        {% if orden.especificaciones.tipo_lente == 'bifocal' and orden.especificaciones.diseno_bifocal %}
         <div class="spec-item">
-            <strong>Material:</strong> <span class="spec-value-title">{{ orden.especificaciones.material or 'N/A' }}</span>
+            <strong>Diseño:</strong> <span class="spec-value-title">{{ orden.especificaciones.diseno_bifocal | replace('_', ' ') }}</span>
+        </div>
+        {% endif %}
+        {% if orden.especificaciones.tipo_lente == 'multifocal' and orden.especificaciones.marca_multifocal %}
+        <div class="spec-item">
+            <strong>Marca:</strong> <span class="spec-value-upper">{{ orden.especificaciones.marca_multifocal }}</span>
         </div>
         <div class="spec-item">
-            <strong>Marca:</strong> <span class="spec-value-upper">{{ orden.especificaciones.marca_lente or 'N/A' }}</span>
+            <strong>Modelo:</strong> <span class="spec-value-title">{{ orden.especificaciones.modelo_multifocal | replace('_', ' ') }}</span>
         </div>
+        {% endif %}
         
         {% if orden.especificaciones.tratamientos and orden.especificaciones.tratamientos|length > 0 %}
         <div class="spec-item">

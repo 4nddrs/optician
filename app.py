@@ -55,10 +55,27 @@ def _authenticate_from_session():
         return None
 
     perfil = fa.obtener_usuario_por_uid(uid)
-    if not perfil or not perfil.get('activo', True):
+    if perfil and not perfil.get('activo', True):
         return None
 
-    return _build_current_user(uid, perfil=perfil)
+    if perfil:
+        return _build_current_user(uid, perfil=perfil)
+
+    # Fallback: si el perfil no se pudo obtener (Firestore caído, timeout, etc.),
+    # usar datos de sesión para evitar redirigir al login por errores transitorios
+    role = session.get('user_role', '')
+    if not role:
+        return None
+
+    perfil_fallback = {
+        'uid': uid,
+        'rol': role,
+        'nombre': session.get('user_name', ''),
+        'email': session.get('user_email', ''),
+        'activo': True,
+    }
+    logger.warning(f"Firestore lookup failed for uid={uid}, using session cache (role={role})")
+    return _build_current_user(uid, perfil=perfil_fallback)
 
 
 def _persist_session_from_profile(uid, perfil, decoded_token=None):
@@ -133,6 +150,13 @@ def login_required(f):
             current_user = _authenticate_from_session()
 
         if current_user is None:
+            uid_session = session.get('user_uid')
+            logger.warning(
+                f"Redirigiendo a /login desde {request.path} — "
+                f"Bearer={bool(auth_header.startswith('Bearer '))}, "
+                f"SessionUID={uid_session}, "
+                f"SessionRole={session.get('user_role')}"
+            )
             if request.path.startswith('/api/'):
                 return jsonify({'success': False, 'error': 'Se requiere un token de acceso'}), 401
             return redirect('/login')
@@ -679,10 +703,14 @@ def nueva_orden():
                 
                 # Specifications
                 'especificaciones': {
-                    'material': request.form.get('material'),
-                    'tratamientos': request.form.getlist('tratamientos[]'),
+                    'material_base': request.form.get('material_base'),
+                    'material_detalle': request.form.get('material_detalle') if request.form.get('material_base') != 'otro' else '',
+                    'material_otro': request.form.get('material_otro') if request.form.get('material_base') == 'otro' else '',
                     'tipo_lente': request.form.get('tipo_lente'),
-                    'marca_lente': request.form.get('marca_lente')
+                    'diseno_bifocal': request.form.get('diseno_bifocal') if request.form.get('tipo_lente') == 'bifocal' else '',
+                    'marca_multifocal': request.form.get('marca_multifocal') if request.form.get('tipo_lente') == 'multifocal' else '',
+                    'modelo_multifocal': request.form.get('modelo_multifocal') if request.form.get('tipo_lente') == 'multifocal' else '',
+                    'tratamientos': request.form.getlist('tratamientos[]')
                 },
                 
                 # Graduation
@@ -784,7 +812,7 @@ def descargar_pdf_orden(orden_id):
         # Obtener los datos de la orden
         orden = fb.get_order_by_id(orden_id)
         if not orden:
-            return jsonify({'success': False, 'error': 'Orden no encontrada'}), 404
+            return render_template('error.html', error='Orden no encontrada'), 404
 
         if not _user_can_access_order(orden):
             return _forbid_order_access()
@@ -801,7 +829,7 @@ def descargar_pdf_orden(orden_id):
         
     except Exception as e:
         logger.error(f"Error descargando PDF: {str(e)}")
-        return jsonify({'success': False, 'error': f'Error al generar PDF: {str(e)}'}), 500
+        return render_template('error.html', error=f'Error al generar PDF: {str(e)}'), 500
 
 @app.route('/ordenes/<orden_id>/editar', methods=['GET', 'POST'])
 @login_required
@@ -862,9 +890,13 @@ def editar_orden(orden_id):
                 },
                 
                 'especificaciones': {
+                    'material_base': data.get('material_base'),
+                    'material_detalle': data.get('material_detalle') if data.get('material_base') != 'otro' else '',
+                    'material_otro': data.get('material_otro') if data.get('material_base') == 'otro' else '',
                     'tipo_lente': data.get('tipo_lente'),
-                    'material': data.get('material'),
-                    'marca_lente': data.get('marca_lente'),
+                    'diseno_bifocal': data.get('diseno_bifocal') if data.get('tipo_lente') == 'bifocal' else '',
+                    'marca_multifocal': data.get('marca_multifocal') if data.get('tipo_lente') == 'multifocal' else '',
+                    'modelo_multifocal': data.get('modelo_multifocal') if data.get('tipo_lente') == 'multifocal' else '',
                     'tratamientos': request.form.getlist('tratamientos[]')
                 },
                 

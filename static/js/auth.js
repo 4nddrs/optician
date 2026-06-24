@@ -181,7 +181,21 @@ function initAuth() {
                             }
                         }
                     } else {
-                        await logoutUser();
+                        // No cerrar sesión por errores transitorios (red, Firestore timeout, etc.)
+                        // Si el usuario ya está autenticado en Firebase, mantener la sesión
+                        // e intentar sincronizar de nuevo en el próximo evento.
+                        console.warn('⚠️ Error sincronizando sesión. Se reintentará en el próximo evento.');
+                        // Forzar un refresco del token para reintentar la sincronización
+                        try {
+                            const refreshedToken = await user.getIdToken(true);
+                            const retryResult = await syncSessionWithBackend(refreshedToken);
+                            userProfile = retryResult.usuario || null;
+                            if (!userProfile) {
+                                userProfile = await getUserProfile(user.uid);
+                            }
+                        } catch (retryError) {
+                            console.warn('⚠️ Reintento fallido, se mantiene la sesión actual:', retryError);
+                        }
                     }
                 }
             } else {

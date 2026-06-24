@@ -1,18 +1,127 @@
 // Functions for edit order page
 console.log('editar_orden.js loaded successfully');
 
+const materialOptions = {
+    organico: [
+        { value: 'blanco', label: 'Blanco' },
+        { value: 'antireflex', label: 'Antireflex' },
+        { value: 'blue_blocker', label: 'Blue Bloker' },
+        { value: 'blue_care', label: 'Blue Care' },
+        { value: 'blue_verde', label: 'Blue Verde' },
+        { value: 'fotocr_ar', label: 'Fotocr. AR' },
+        { value: 'fotocr_blue', label: 'Fotocr. Blue' },
+        { value: 'transitions', label: 'Transitions' }
+    ],
+    policarbonato: [
+        { value: 'blanco', label: 'Blanco' },
+        { value: 'antireflex', label: 'Antireflex' },
+        { value: 'blue_blocker', label: 'Blue Bloker' },
+        { value: 'blue_care', label: 'Blue Care' },
+        { value: 'blue_verde', label: 'Blue Verde' },
+        { value: 'fotocr_ar', label: 'Fotocr. AR' },
+        { value: 'fotocr_blue', label: 'Fotocr. Blue' },
+        { value: 'transitions', label: 'Transitions' }
+    ],
+    vidrio: [
+        { value: 'blanco', label: 'Blanco' },
+        { value: 'fotocromatico', label: 'Fotocromático' }
+    ]
+};
+
+const modeloMultifocalOptions = {
+    kodak: [
+        { value: 'unique_hd', label: 'Unique HD' },
+        { value: 'easy', label: 'Easy' },
+        { value: 'precise', label: 'Precise' }
+    ],
+    varilux: [
+        { value: 'physio_30', label: 'Physio 30' },
+        { value: 'physio', label: 'Physio' },
+        { value: 'confort', label: 'Confort' },
+        { value: 'dynamic', label: 'Dynamic' }
+    ],
+    evolution_xperience: [
+        { value: 'evolution_essential', label: 'Evolution Essential' },
+        { value: 'evolution_pro', label: 'Evolution Pro' },
+        { value: 'evolution_pro_2_0', label: 'Evolution Pro 2.0' },
+        { value: 'xperience_ia', label: 'Xperience IA' }
+    ]
+};
+
+function actualizarMaterialDetalle() {
+    const base = document.getElementById('material_base').value;
+    const grupoDetalle = document.getElementById('grupo_material_detalle');
+    const grupoOtro = document.getElementById('grupo_material_otro');
+    const selectDetalle = document.getElementById('material_detalle');
+
+    grupoDetalle.style.display = 'none';
+    grupoOtro.style.display = 'none';
+
+    if (base === 'otro') {
+        grupoOtro.style.display = 'block';
+    } else if (base && materialOptions[base]) {
+        grupoDetalle.style.display = 'block';
+        selectDetalle.innerHTML = '<option value="">Seleccione...</option>';
+        materialOptions[base].forEach(function(opt) {
+            selectDetalle.innerHTML += '<option value="' + opt.value + '">' + opt.label + '</option>';
+        });
+    }
+}
+
+function actualizarDisenoLente() {
+    const tipo = document.getElementById('tipo_lente').value;
+    const grupoBifocal = document.getElementById('grupo_diseno_bifocal');
+    const grupoMarca = document.getElementById('grupo_marca_multifocal');
+    const grupoModelo = document.getElementById('grupo_modelo_multifocal');
+
+    grupoBifocal.style.display = 'none';
+    grupoMarca.style.display = 'none';
+    grupoModelo.style.display = 'none';
+
+    if (tipo === 'bifocal') {
+        grupoBifocal.style.display = 'block';
+    } else if (tipo === 'multifocal') {
+        grupoMarca.style.display = 'block';
+    }
+}
+
+function actualizarModeloMultifocal() {
+    const marca = document.getElementById('marca_multifocal').value;
+    const grupoModelo = document.getElementById('grupo_modelo_multifocal');
+    const selectModelo = document.getElementById('modelo_multifocal');
+
+    if (marca && modeloMultifocalOptions[marca]) {
+        grupoModelo.style.display = 'block';
+        selectModelo.innerHTML = '<option value="">Seleccione...</option>';
+        modeloMultifocalOptions[marca].forEach(function(opt) {
+            selectModelo.innerHTML += '<option value="' + opt.value + '">' + opt.label + '</option>';
+        });
+    } else {
+        grupoModelo.style.display = 'none';
+    }
+}
+
+function setupEspecificacionesListeners() {
+    const materialBase = document.getElementById('material_base');
+    const tipoLente = document.getElementById('tipo_lente');
+    const marcaMultifocal = document.getElementById('marca_multifocal');
+
+    if (materialBase) materialBase.addEventListener('change', actualizarMaterialDetalle);
+    if (tipoLente) tipoLente.addEventListener('change', actualizarDisenoLente);
+    if (marcaMultifocal) marcaMultifocal.addEventListener('change', actualizarModeloMultifocal);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Populate form with existing order data if available
+    setupEspecificacionesListeners();
+
     if (window.ORDEN_A_EDITAR) {
         const o = window.ORDEN_A_EDITAR;
         const form = document.getElementById('formEditarOrden') || document.getElementById('formNuevaOrden');
         
         if (form) {
-            // Pre-fill main inputs
             if (document.getElementById('id_sucursal')) document.getElementById('id_sucursal').value = o.id_sucursal || '';
             if (document.getElementById('fecha_entrega')) document.getElementById('fecha_entrega').value = o.fecha_entrega || '';
             
-            // Client data
             if (window.CLIENTE_A_EDITAR) {
                 const c = window.CLIENTE_A_EDITAR;
                 if (document.getElementById('id_cliente')) document.getElementById('id_cliente').value = c.id || o.id_cliente || '';
@@ -23,14 +132,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Specs
             if (o.especificaciones) {
-                if (document.getElementById('tipo_lente')) document.getElementById('tipo_lente').value = o.especificaciones.tipo_lente || '';
-                if (document.getElementById('material')) document.getElementById('material').value = o.especificaciones.material || '';
-                if (document.getElementById('marca_lente')) document.getElementById('marca_lente').value = o.especificaciones.marca_lente || '';
-                
-                // Tratamientos checkboxes
-                if (o.especificaciones.tratamientos && Array.isArray(o.especificaciones.tratamientos)) {
-                    o.especificaciones.tratamientos.forEach(trat => {
-                        const cb = document.querySelector(`input[name="tratamientos[]"][value="${trat}"]`);
+                const esp = o.especificaciones;
+
+                if (document.getElementById('material_base')) {
+                    document.getElementById('material_base').value = esp.material_base || '';
+                    actualizarMaterialDetalle();
+                }
+                if (document.getElementById('material_detalle')) {
+                    document.getElementById('material_detalle').value = esp.material_detalle || '';
+                }
+                if (document.getElementById('material_otro')) {
+                    document.getElementById('material_otro').value = esp.material_otro || '';
+                }
+                if (document.getElementById('tipo_lente')) {
+                    document.getElementById('tipo_lente').value = esp.tipo_lente || '';
+                    actualizarDisenoLente();
+                }
+                if (document.getElementById('diseno_bifocal')) {
+                    document.getElementById('diseno_bifocal').value = esp.diseno_bifocal || '';
+                }
+                if (document.getElementById('marca_multifocal')) {
+                    document.getElementById('marca_multifocal').value = esp.marca_multifocal || '';
+                    actualizarModeloMultifocal();
+                }
+                if (document.getElementById('modelo_multifocal')) {
+                    document.getElementById('modelo_multifocal').value = esp.modelo_multifocal || '';
+                }
+
+                if (esp.tratamientos && Array.isArray(esp.tratamientos)) {
+                    esp.tratamientos.forEach(function(trat) {
+                        const cb = document.querySelector('input[name="tratamientos[]"][value="' + trat + '"]');
                         if (cb) cb.checked = true;
                     });
                 }
@@ -71,8 +202,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (o.graduacion && o.graduacion.cerca) {
                 if (document.getElementById('adicion')) document.getElementById('adicion').value = o.graduacion.cerca.adicion || '';
             }
-            
-            // Update action route for the form manually in the submit handler
         }
     }
 });

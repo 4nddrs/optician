@@ -429,13 +429,16 @@ input:checked + .slider:before {
     bottom: 0;
     background: rgba(0, 0, 0, 0.7);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     z-index: 1000;
-    pointer-events: auto; /* IMPORTANTE: Permitir interacciones */
+    pointer-events: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 1rem 0;
 }
 
-.modal {
+#userDetailModal .modal {
     background: var(--surface-primary);
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
@@ -444,7 +447,9 @@ input:checked + .slider:before {
     display: block;
     position: relative;
     width: 100%;
+    max-width: 600px;
     height: auto;
+    margin: auto;
 }
 
 .modal-header,
