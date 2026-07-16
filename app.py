@@ -293,6 +293,7 @@ def obtener_usuarios():
         role = (request.args.get('rol') or '').strip().lower()
         sucursal = (request.args.get('sucursal') or '').strip()
         search = (request.args.get('search') or '').strip().lower()
+        activo_raw = request.args.get('activo')
 
         # Defensive bounds
         if page < 1:
@@ -302,7 +303,11 @@ def obtener_usuarios():
         if page_size > 100:
             page_size = 100
 
-        usuarios = fa.obtener_usuarios_activos()
+        activo_filter = True
+        if activo_raw is not None:
+            activo_filter = str(activo_raw).strip().lower() in ('1', 'true', 't', 'yes', 'si', 'activo')
+
+        usuarios = fa.obtener_usuarios_por_estado(activo_filter)
 
         # Normalize/serialize values for JSON response
         normalized = []
@@ -381,6 +386,21 @@ def actualizar_usuario_endpoint(uid):
 def eliminar_usuario_endpoint(uid):
     try:
         resultado = fa.eliminar_usuario(uid)
+        if resultado['success']:
+            return jsonify(resultado), 200
+        else:
+            return jsonify(resultado), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# API: Eliminar Usuario Permanentemente
+@app.route('/api/usuarios/<uid>/eliminar-permanente', methods=['POST', 'DELETE'])
+@login_required
+@admin_required
+def eliminar_usuario_permanente_endpoint(uid):
+    try:
+        resultado = fa.eliminar_usuario_permanente(uid)
         if resultado['success']:
             return jsonify(resultado), 200
         else:
@@ -755,6 +775,10 @@ def nueva_orden():
                     'cambios': ['Creación de la orden']
                 }]
             }
+
+            nro_correlativo = request.form.get('nro_correlativo')
+            if nro_correlativo not in (None, ''):
+                data['nro_correlativo'] = int(nro_correlativo)
             
             orden_id = fb.create_order(data)
             return jsonify({'success': True, 'orden_id': orden_id})
@@ -869,6 +893,7 @@ def editar_orden(orden_id):
                 'id_sucursal': data.get('id_sucursal'),
                 'fecha_entrega': data.get('fecha_entrega'),
                 'id_empleado': orden.get('id_empleado') or data.get('id_empleado'),
+                'nro_correlativo': int(data.get('nro_correlativo') or orden.get('nro_correlativo') or 0),
                 
                 'graduacion': {
                     'lejos': {
@@ -923,6 +948,8 @@ def editar_orden(orden_id):
                 cambios.append(f"Total modificado a {new_order_data['pagos']['total']}")
             if orden.get('id_sucursal') != new_order_data['id_sucursal']:
                 cambios.append(f"Sucursal modificada a {new_order_data['id_sucursal']}")
+            if orden.get('nro_correlativo') != new_order_data['nro_correlativo']:
+                cambios.append(f"Correlativo modificado a {new_order_data['nro_correlativo']}")
             if orden.get('fecha_entrega') != new_order_data['fecha_entrega']:
                 cambios.append(f"Fecha de entrega modificada a {new_order_data['fecha_entrega']}")
                 

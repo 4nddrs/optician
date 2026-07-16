@@ -236,9 +236,20 @@ def get_next_correlative(branch_id):
 
 def create_order(data):
     """Create a new work order"""
-    # Generate correlative
-    nro_correlativo = get_next_correlative(data['id_sucursal'])
+    # Generate or use the provided correlative
+    requested_correlative = data.get('nro_correlativo')
+    if requested_correlative in (None, ''):
+        nro_correlativo = get_next_correlative(data['id_sucursal'])
+    else:
+        nro_correlativo = int(requested_correlative)
+        if nro_correlativo < 1:
+            raise ValueError('El correlativo debe ser mayor que cero')
+
     id_orden = f"{data['id_sucursal']}_{nro_correlativo}"
+
+    existing_order = db.collection('ordenes_trabajo').document(id_orden).get()
+    if existing_order.exists:
+        raise ValueError('Ya existe una orden con ese correlativo en la sucursal seleccionada')
     
     data['id_orden'] = id_orden
     data['nro_correlativo'] = nro_correlativo

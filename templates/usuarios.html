@@ -38,6 +38,16 @@
             </select>
         </div>
         <div class="filter-group">
+            <label>Estado:</label>
+            <div class="switch-container filter-switch-container">
+                <label class="switch">
+                    <input type="checkbox" id="filterActivoSwitch" checked>
+                    <span class="slider round"></span>
+                </label>
+                <span id="filterActivoText" class="switch-label">Activos</span>
+            </div>
+        </div>
+        <div class="filter-group">
             <input type="text" id="searchInput" class="filter-input" placeholder="Buscar por nombre, email o celular...">
         </div>
     </div>
@@ -80,7 +90,7 @@
 
 <!-- Modal de Detalles de Usuario -->
 <div id="userDetailModal" class="modal-backdrop" style="display: none;">
-    <div class="modal" style="max-width: 600px;">
+    <div class="modal user-detail-modal">
         <div class="modal-header">
             <h2>Detalles del Usuario</h2>
         </div>
@@ -88,11 +98,11 @@
             <form id="formUpdateUser">
                 <input type="hidden" id="detailUid">
                 <div class="user-detail-grid">
-                    <div class="form-group">
+                    <div class="form-group detail-name-group">
                         <label class="form-label" for="detailName">Nombre</label>
                         <input type="text" id="detailName" class="form-input" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group detail-email-group">
                         <label class="form-label" for="detailEmail">Email</label>
                         <input type="email" id="detailEmail" class="form-input" required>
                     </div>
@@ -117,14 +127,17 @@
                         <label class="form-label">Miembro desde</label>
                         <div id="detailFechaCreacion" style="padding: 0.75rem; background: var(--bg-primary); border-radius: var(--border-radius-small); border: 1px solid var(--border-color); color: var(--text-secondary);"></div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group detail-state-group">
                         <label class="form-label">Estado</label>
-                        <div class="switch-container">
-                            <label class="switch">
-                                <input type="checkbox" id="detailActivoSwitch">
-                                <span class="slider round"></span>
-                            </label>
-                            <span id="detailActivoText" class="switch-label"></span>
+                        <div class="state-actions-row">
+                            <div class="switch-container">
+                                <label class="switch">
+                                    <input type="checkbox" id="detailActivoSwitch">
+                                    <span class="slider round"></span>
+                                </label>
+                                <span id="detailActivoText" class="switch-label"></span>
+                            </div>
+                            <button type="button" class="btn-danger inline-danger" id="btnDeleteUserPermanent"><i class="fas fa-trash"></i> Eliminar</button>
                         </div>
                     </div>
                 </div>
@@ -143,6 +156,29 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
+}
+
+.state-actions-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.state-actions-row .switch-container {
+    flex-shrink: 0;
+}
+
+.inline-danger {
+    white-space: nowrap;
+    margin-left: 0;
+    flex-shrink: 0;
+}
+
+.filter-switch-container {
+    min-height: 44px;
 }
 
 .switch {
@@ -447,9 +483,13 @@ input:checked + .slider:before {
     display: block;
     position: relative;
     width: 100%;
-    max-width: 600px;
+    max-width: 720px;
     height: auto;
     margin: auto;
+}
+
+.user-detail-modal {
+    width: min(100% - 2rem, 720px);
 }
 
 .modal-header,
@@ -472,8 +512,17 @@ input:checked + .slider:before {
 
 .user-detail-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--spacing-lg);
+}
+
+.detail-name-group,
+.detail-email-group {
+    grid-column: 1 / -1;
+}
+
+.detail-state-group {
+    grid-column: 1 / -1;
 }
 
 .modal-footer {
@@ -534,6 +583,43 @@ input:checked + .slider:before {
         grid-template-columns: 1fr;
     }
 
+    #userDetailModal {
+        padding: 0.5rem 0;
+    }
+
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding-left: var(--spacing-md);
+        padding-right: var(--spacing-md);
+    }
+
+    .user-detail-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+
+    .modal-footer {
+        flex-direction: column;
+    }
+
+    .modal-footer .btn-secondary,
+    .modal-footer .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .state-actions-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .inline-danger {
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+    }
+
     .table-row {
         grid-template-columns: 1fr;
         padding: var(--spacing-md);
@@ -556,8 +642,20 @@ input:checked + .slider:before {
         min-width: 100px;
     }
 
+}
+
+@media (max-width: 900px) and (min-width: 769px) {
     .user-detail-grid {
         grid-template-columns: 1fr;
+    }
+
+    .modal-footer {
+        flex-wrap: wrap;
+    }
+
+    .modal-footer .btn-secondary,
+    .modal-footer .btn-primary {
+        flex: 1 1 100%;
     }
 }
 </style>
@@ -637,6 +735,7 @@ async function loadUsers() {
     const role = document.getElementById('filterRole').value;
     const sucursal = document.getElementById('filterSucursal').value;
     const search = document.getElementById('searchInput').value.trim();
+    const activo = document.getElementById('filterActivoSwitch').checked;
 
     const params = new URLSearchParams({
         page: String(currentPage),
@@ -645,6 +744,7 @@ async function loadUsers() {
     if (role) params.set('rol', role);
     if (sucursal) params.set('sucursal', sucursal);
     if (search) params.set('search', search);
+    params.set('activo', activo ? 'true' : 'false');
 
     try {
         const response = await fetch('/api/usuarios?' + params.toString());
@@ -840,6 +940,61 @@ document.getElementById('detailActivoSwitch').addEventListener('change', functio
     activoText.textContent = this.checked ? 'Activada' : 'Desactivada';
 });
 
+document.getElementById('btnDeleteUserPermanent').addEventListener('click', async function() {
+    const uid = document.getElementById('detailUid').value;
+
+    if (!uid) {
+        showNotification('No se pudo identificar el usuario a eliminar', 'error');
+        return;
+    }
+
+    const confirmed = await showAppConfirm('Esta acción eliminará el usuario permanentemente de Firebase Auth y Firestore. ¿Deseas continuar?', {
+        title: 'Eliminar usuario',
+        okText: 'Eliminar',
+        cancelText: 'Cancelar',
+        iconClass: 'fas fa-trash'
+    });
+    if (!confirmed) {
+        return;
+    }
+
+    const btn = this;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+    btn.disabled = true;
+
+    try {
+        const currentUser = getCurrentUser();
+        if (!currentUser) {
+            showNotification('Error: Usuario no autenticado', 'error');
+            return;
+        }
+
+        const idToken = await currentUser.getIdToken();
+        const response = await fetch(`/api/usuarios/${uid}/eliminar-permanente`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            }
+        });
+
+        const json = await response.json();
+        if (response.ok && json.success) {
+            showNotification('Usuario eliminado permanentemente', 'success');
+            document.getElementById('userDetailModal').style.display = 'none';
+            loadUsers();
+        } else {
+            showNotification('Error: ' + (json.error || 'No se pudo eliminar el usuario'), 'error');
+        }
+    } catch (error) {
+        showNotification('Error conectando al servidor', 'error');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+});
+
 document.getElementById('btnCloseUserDetail').addEventListener('click', function() {
     document.getElementById('userDetailModal').style.display = 'none';
 });
@@ -857,6 +1012,13 @@ document.getElementById('filterRole').addEventListener('change', function() {
 });
 
 document.getElementById('filterSucursal').addEventListener('change', function() {
+    currentPage = 1;
+    loadUsers();
+});
+
+document.getElementById('filterActivoSwitch').addEventListener('change', function() {
+    const filterActivoText = document.getElementById('filterActivoText');
+    filterActivoText.textContent = this.checked ? 'Activos' : 'Inactivos';
     currentPage = 1;
     loadUsers();
 });

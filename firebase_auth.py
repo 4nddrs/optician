@@ -261,24 +261,55 @@ def eliminar_usuario(uid):
         return {'success': False, 'error': f'Error al eliminar usuario: {str(e)}'}
 
 
-def obtener_usuarios_activos():
+def eliminar_usuario_permanente(uid):
     """
-    Obtiene todos los usuarios activos
+    Elimina permanentemente un usuario de Firebase Auth y Firestore.
+
+    Args:
+        uid (str): UID del usuario
+
+    Returns:
+        dict: Resultado de la operación
+    """
+    try:
+        try:
+            auth.delete_user(uid)
+        except auth.UserNotFoundError:
+            pass
+
+        db.collection('usuarios').document(uid).delete()
+
+        return {'success': True, 'mensaje': 'Usuario eliminado permanentemente'}
+
+    except Exception as e:
+        return {'success': False, 'error': f'Error al eliminar usuario permanentemente: {str(e)}'}
+
+
+def obtener_usuarios_por_estado(activo=True):
+    """
+    Obtiene usuarios filtrados por estado de activo
     
     Returns:
         list: Lista de usuarios activos
     """
     try:
         usuarios = []
-        docs = db.collection('usuarios').where('activo', '==', True).stream()
+        docs = db.collection('usuarios').where('activo', '==', bool(activo)).stream()
         for doc in docs:
             usuario = doc.to_dict()
             usuario['uid'] = doc.id
             usuarios.append(usuario)
         return usuarios
     except Exception as e:
-        print(f'Error al obtener usuarios activos: {str(e)}')
+        print(f'Error al obtener usuarios por estado: {str(e)}')
         return []
+
+
+def obtener_usuarios_activos():
+    """
+    Obtiene todos los usuarios activos.
+    """
+    return obtener_usuarios_por_estado(True)
 
 
 def verificar_estado_usuario(uid):

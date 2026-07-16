@@ -390,6 +390,7 @@
 
         .app-alert-modal .app-alert-footer {
             display: flex;
+            gap: 0.75rem;
             justify-content: flex-end;
             padding: 0 1.25rem 1.25rem;
         }
@@ -566,6 +567,7 @@
             </div>
             <div class="app-alert-body" id="appAlertMessage"></div>
             <div class="app-alert-footer">
+                <button type="button" class="btn-secondary app-alert-close" id="appAlertCancelBtn" style="display: none;">Cancelar</button>
                 <button type="button" class="btn-primary app-alert-close" id="appAlertOkBtn">OK</button>
             </div>
         </div>

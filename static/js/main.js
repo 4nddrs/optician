@@ -9,6 +9,8 @@ if ('serviceWorker' in navigator) {
 
 // General utilities
 let appAlertCallback = null;
+let appAlertResolver = null;
+let appAlertMode = 'alert';
 
 function showAppAlert(message, options = {}) {
     const modal = document.getElementById('appAlertModal');
@@ -17,6 +19,7 @@ function showAppAlert(message, options = {}) {
     const titleEl = document.querySelector('#appAlertTitle span');
     const iconEl = document.querySelector('#appAlertTitle i');
     const okBtn = document.getElementById('appAlertOkBtn');
+    const cancelBtn = document.getElementById('appAlertCancelBtn');
 
     if (!modal || !messageEl || !okBtn) {
         if (typeof window.__nativeAlert === 'function') {
@@ -31,8 +34,14 @@ function showAppAlert(message, options = {}) {
     titleEl.textContent = title;
     iconEl.className = iconClass;
     messageEl.textContent = String(message ?? '');
+    okBtn.textContent = options.okText || 'OK';
+    if (cancelBtn) {
+        cancelBtn.style.display = 'none';
+    }
 
     appAlertCallback = typeof options.onClose === 'function' ? options.onClose : null;
+    appAlertResolver = null;
+    appAlertMode = 'alert';
 
     modal.classList.add('show');
     modal.setAttribute('aria-hidden', 'false');
@@ -42,9 +51,48 @@ function showAppAlert(message, options = {}) {
     okBtn.focus();
 }
 
+function showAppConfirm(message, options = {}) {
+    const modal = document.getElementById('appAlertModal');
+    const backdrop = document.getElementById('modalBackdrop');
+    const messageEl = document.getElementById('appAlertMessage');
+    const titleEl = document.querySelector('#appAlertTitle span');
+    const iconEl = document.querySelector('#appAlertTitle i');
+    const okBtn = document.getElementById('appAlertOkBtn');
+    const cancelBtn = document.getElementById('appAlertCancelBtn');
+
+    if (!modal || !messageEl || !okBtn || !cancelBtn) {
+        return Promise.resolve(window.confirm(String(message ?? '')));
+    }
+
+    const title = options.title || 'Confirmación';
+    const iconClass = options.iconClass || 'fas fa-triangle-exclamation';
+
+    titleEl.textContent = title;
+    iconEl.className = iconClass;
+    messageEl.textContent = String(message ?? '');
+    okBtn.textContent = options.okText || 'Aceptar';
+    cancelBtn.textContent = options.cancelText || 'Cancelar';
+    cancelBtn.style.display = 'inline-flex';
+
+    appAlertMode = 'confirm';
+    appAlertCallback = null;
+
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    if (backdrop) backdrop.classList.add('show');
+    document.body.style.overflow = 'hidden';
+
+    okBtn.focus();
+
+    return new Promise(resolve => {
+        appAlertResolver = resolve;
+    });
+}
+
 function hideAppAlert() {
     const modal = document.getElementById('appAlertModal');
     const backdrop = document.getElementById('modalBackdrop');
+    const cancelBtn = document.getElementById('appAlertCancelBtn');
 
     if (modal) {
         modal.classList.remove('show');
@@ -52,11 +100,20 @@ function hideAppAlert() {
     }
     if (backdrop) backdrop.classList.remove('show');
     document.body.style.overflow = 'auto';
+    if (cancelBtn) {
+        cancelBtn.style.display = 'none';
+    }
 
     if (appAlertCallback) {
         const callback = appAlertCallback;
         appAlertCallback = null;
         callback();
+    }
+
+    if (appAlertResolver) {
+        const resolve = appAlertResolver;
+        appAlertResolver = null;
+        resolve(false);
     }
 }
 
@@ -93,9 +150,31 @@ function closeModal(modalId) {
 document.addEventListener('DOMContentLoaded', function() {
     const appAlertModal = document.getElementById('appAlertModal');
     const appAlertOkBtn = document.getElementById('appAlertOkBtn');
+    const appAlertCancelBtn = document.getElementById('appAlertCancelBtn');
 
     if (appAlertOkBtn) {
-        appAlertOkBtn.addEventListener('click', hideAppAlert);
+        appAlertOkBtn.addEventListener('click', function() {
+            if (appAlertResolver) {
+                const resolve = appAlertResolver;
+                appAlertResolver = null;
+                resolve(true);
+                hideAppAlert();
+                return;
+            }
+
+            hideAppAlert();
+        });
+    }
+
+    if (appAlertCancelBtn) {
+        appAlertCancelBtn.addEventListener('click', function() {
+            if (appAlertResolver) {
+                const resolve = appAlertResolver;
+                appAlertResolver = null;
+                resolve(false);
+            }
+            hideAppAlert();
+        });
     }
 
     if (appAlertModal) {
@@ -162,6 +241,11 @@ document.addEventListener('keydown', function(e) {
         const appAlertModal = document.getElementById('appAlertModal');
 
         if (appAlertModal && appAlertModal.classList.contains('show')) {
+                if (appAlertResolver) {
+                    const resolve = appAlertResolver;
+                    appAlertResolver = null;
+                    resolve(false);
+                }
             hideAppAlert();
             return;
         }
