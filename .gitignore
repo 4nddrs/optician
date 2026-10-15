@@ -69,3 +69,6 @@ flask_session/
 #Scripts
 reset.py
 
+# Herramientas de agentes de IA (estado generado en local, no versionar)
+.atl/
+
