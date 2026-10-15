@@ -711,23 +711,29 @@ document.addEventListener('DOMContentLoaded', function() {
     if (marcaMultifocal) marcaMultifocal.addEventListener('change', actualizarModeloMultifocal);
 });
 
-// Vendedora: el combo ofrece la lista de la tienda y una opcion para escribir una
-// propia. El campo libre solo se muestra (y se exige) cuando se elige "Otro"; el
-// backend ignora su contenido en cualquier otro caso.
+// Combos con opcion "Otro" (vendedora y laboratorio): el combo ofrece la lista de
+// la tienda y un campo libre para escribir un valor propio. El campo libre solo se
+// muestra (y se exige) cuando se elige "Otro"; el backend ignora su contenido en
+// cualquier otro caso.
 document.addEventListener('DOMContentLoaded', function() {
-    const comboVendedora = document.getElementById('vendedora');
-    const campoVendedoraOtro = document.getElementById('vendedoraOtro');
-    if (!comboVendedora || !campoVendedoraOtro) return;
+    function sincronizarComboOtro(idCombo, idCampoLibre) {
+        const combo = document.getElementById(idCombo);
+        const campoLibre = document.getElementById(idCampoLibre);
+        if (!combo || !campoLibre) return;
 
-    const valorOtro = comboVendedora.dataset.otro;
+        const valorOtro = combo.dataset.otro;
 
-    function sincronizarVendedora() {
-        const esOtro = comboVendedora.value === valorOtro;
-        campoVendedoraOtro.style.display = esOtro ? '' : 'none';
-        campoVendedoraOtro.required = esOtro;
-        if (esOtro) campoVendedoraOtro.focus();
+        function sincronizar() {
+            const esOtro = combo.value === valorOtro;
+            campoLibre.style.display = esOtro ? '' : 'none';
+            campoLibre.required = esOtro;
+            if (esOtro) campoLibre.focus();
+        }
+
+        combo.addEventListener('change', sincronizar);
+        sincronizar();
     }
 
-    comboVendedora.addEventListener('change', sincronizarVendedora);
-    sincronizarVendedora();
+    sincronizarComboOtro('vendedora', 'vendedoraOtro');
+    sincronizarComboOtro('laboratorio', 'laboratorioOtro');
 });

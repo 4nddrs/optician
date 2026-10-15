@@ -320,7 +320,16 @@
 
             <div class="form-group">
                 <label for="laboratorio"><i class="fas fa-flask"></i> Laboratorio:</label>
-                <input type="text" id="laboratorio" name="laboratorio" class="form-input" placeholder="Nombre del laboratorio">
+                <select id="laboratorio" name="laboratorio" class="form-select" data-otro="{{ LABORATORIO_OTRO }}">
+                    <option value="">Sin asignar</option>
+                    {% for laboratorio in LABORATORIOS %}
+                    <option value="{{ laboratorio }}">{{ laboratorio }}</option>
+                    {% endfor %}
+                    <option value="{{ LABORATORIO_OTRO }}">Otro (escribir)…</option>
+                </select>
+                <input type="text" id="laboratorioOtro" name="laboratorio_otro" class="form-input"
+                       placeholder="Escribe el nombre del laboratorio"
+                       style="display: none; margin-top: 0.5rem;">
             </div>
         </div>
     </div>
@@ -628,5 +637,5 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{{ url_for('static', filename='js/nueva_orden.js') }}?v=7"></script>
+    <script src="{{ url_for('static', filename='js/nueva_orden.js') }}?v=8"></script>
 {% endblock %}

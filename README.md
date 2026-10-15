@@ -404,7 +404,7 @@ gunicorn -b 0.0.0.0:8080 app:app
 - Prescription entry (distance and near)
 - Lens specifications
 - Frame details
-- Vendedora and Laboratorio free-text fields
+- Vendedora and Laboratorio combos with the store list, plus an "Other" option to type a custom name
 - Delivery date accepts past dates
 - Payment information
 - Automatic order number generation

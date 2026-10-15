@@ -147,25 +147,56 @@ VENDEDORAS = [
     'Vianca',
 ]
 
-# Valor del combo que significa "escribir una vendedora propia". Se usa un
-# centinela en vez de un nombre para que nunca choque con una vendedora real.
+# Laboratorios de la tienda. Misma forma que VENDEDORAS: fuente única para los
+# formularios de orden, expuesta como LABORATORIOS y resuelta con
+# _laboratorio_del_formulario.
+LABORATORIOS = [
+    'Innovar',
+    'Digilab',
+    'Visión tech',
+    'Easy lab',
+    'Premier',
+    'Rosales',
+    'Global',
+    'Cat',
+    'Lioc',
+    'Dislab',
+    'Seúl',
+    'Cerisier',
+]
+
+# Valor del combo que significa "escribir uno propio" (vendedora o laboratorio).
+# Se usa un centinela en vez de un nombre para que nunca choque con un valor real.
 VENDEDORA_OTRO = '__otro__'
+LABORATORIO_OTRO = VENDEDORA_OTRO
 
 app.jinja_env.globals['VENDEDORAS'] = VENDEDORAS
 app.jinja_env.globals['VENDEDORA_OTRO'] = VENDEDORA_OTRO
+app.jinja_env.globals['LABORATORIOS'] = LABORATORIOS
+app.jinja_env.globals['LABORATORIO_OTRO'] = LABORATORIO_OTRO
+
+
+def _valor_de_combo(form, campo, campo_libre, centinela):
+    """Valor de un combo de orden con opción "Otro".
+
+    Si se eligió el centinela, vale lo que se haya escrito en el campo libre. En
+    cualquier otro caso vale la opción del combo y el campo libre se ignora, para
+    que un valor viejo no pise la elección.
+    """
+    elegido = (form.get(campo) or '').strip()
+    if elegido == centinela:
+        return (form.get(campo_libre) or '').strip()
+    return elegido
 
 
 def _vendedora_del_formulario(form):
-    """Resuelve la vendedora elegida en el combo de un formulario de orden.
+    """Resuelve la vendedora elegida en el combo de un formulario de orden."""
+    return _valor_de_combo(form, 'vendedora', 'vendedora_otro', VENDEDORA_OTRO)
 
-    Si se eligió la opción "Otro", vale lo que se haya escrito en el campo libre.
-    En cualquier otro caso vale la opción del combo y el campo libre se ignora,
-    para que un valor viejo no pise la elección.
-    """
-    elegida = (form.get('vendedora') or '').strip()
-    if elegida == VENDEDORA_OTRO:
-        return (form.get('vendedora_otro') or '').strip()
-    return elegida
+
+def _laboratorio_del_formulario(form):
+    """Resuelve el laboratorio elegido en el combo de un formulario de orden."""
+    return _valor_de_combo(form, 'laboratorio', 'laboratorio_otro', LABORATORIO_OTRO)
 
 # Las vistas hacen varias lecturas independientes a Firestore y cada una cuesta
 # ~300 ms. Ejecutarlas en paralelo hace que el costo total sea el de la más lenta
@@ -851,7 +882,7 @@ def nueva_orden():
                 # registro histórico: nace 'Entregado' en vez de 'Pendiente'.
                 'estado': _estado_inicial_orden(request.form.get('fecha_entrega')),
                 'vendedora': _vendedora_del_formulario(request.form),
-                'laboratorio': (request.form.get('laboratorio') or '').strip(),
+                'laboratorio': _laboratorio_del_formulario(request.form),
                 
                 # Specifications
                 'especificaciones': {
