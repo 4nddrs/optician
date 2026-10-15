@@ -108,6 +108,7 @@
                         <dt class="text-sm text-gray-400">Tipo de Lente</dt>
                         <dd class="text-white font-medium">{{ orden.especificaciones.tipo_lente | title if orden.especificaciones.tipo_lente else 'N/A' }}</dd>
                     </div>
+                    {% if orden.especificaciones.tipo_lente in ['bifocal', 'multifocal'] %}
                     <div class="flex flex-col">
                         <dt class="text-sm text-gray-400">
                             {% if orden.especificaciones.tipo_lente == 'bifocal' %}
@@ -124,6 +125,7 @@
                             {% endif %}
                         </dd>
                     </div>
+                    {% endif %}
                     {% if orden.especificaciones.tipo_lente == 'multifocal' and orden.especificaciones.marca_multifocal %}
                     <div class="flex flex-col">
                         <dt class="text-sm text-gray-400">Modelo Multifocal</dt>
@@ -204,6 +206,18 @@
                         <dt class="text-sm text-gray-400">Fecha de Entrega</dt>
                         <dd class="text-white font-medium">{{ orden.fecha_entrega }}</dd>
                     </div>
+                    {% if orden.vendedora %}
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Vendedora</dt>
+                        <dd class="text-white font-medium break-words">{{ orden.vendedora }}</dd>
+                    </div>
+                    {% endif %}
+                    {% if orden.laboratorio %}
+                    <div class="flex flex-col">
+                        <dt class="text-sm text-gray-400">Laboratorio</dt>
+                        <dd class="text-white font-medium break-words">{{ orden.laboratorio }}</dd>
+                    </div>
+                    {% endif %}
                     <div class="flex flex-col">
                         <dt class="text-sm text-gray-400">Sucursal</dt>
                         <dd class="text-white font-medium break-words">{{ sucursal.nombre if sucursal else orden.id_sucursal }}</dd>

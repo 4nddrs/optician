@@ -122,6 +122,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (document.getElementById('id_sucursal')) document.getElementById('id_sucursal').value = o.id_sucursal || '';
             if (document.getElementById('nro_correlativo')) document.getElementById('nro_correlativo').value = o.nro_correlativo || '';
             if (document.getElementById('fecha_entrega')) document.getElementById('fecha_entrega').value = o.fecha_entrega || '';
+            if (document.getElementById('vendedora')) document.getElementById('vendedora').value = o.vendedora || '';
+            if (document.getElementById('laboratorio')) document.getElementById('laboratorio').value = o.laboratorio || '';
             
             if (window.CLIENTE_A_EDITAR) {
                 const c = window.CLIENTE_A_EDITAR;
@@ -294,15 +296,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (adelantoInput) {
         adelantoInput.addEventListener('input', calcularSaldo);
-    }
-});
-
-// Set minimum delivery date (today)
-document.addEventListener('DOMContentLoaded', function() {
-    const fechaEntrega = document.getElementById('fecha_entrega');
-    if (fechaEntrega) {
-        const hoy = new Date().toISOString().split('T')[0];
-        fechaEntrega.min = hoy;
     }
 });
 

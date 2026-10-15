@@ -86,6 +86,126 @@
         justify-content: center;
     }
 }
+
+/* Modal: crear cliente sin salir de la orden */
+.nuevo-cliente-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.75);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.nuevo-cliente-modal.show {
+    display: flex;
+}
+
+.nuevo-cliente-modal .modal-panel {
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: var(--surface-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-xl);
+}
+
+.nuevo-cliente-modal .modal-header,
+.nuevo-cliente-modal .modal-footer {
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.nuevo-cliente-modal .modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nuevo-cliente-modal .modal-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nuevo-cliente-modal .modal-footer {
+    border-top: 1px solid var(--border-color);
+}
+
+.nuevo-cliente-modal .modal-body {
+    padding: 1.25rem;
+}
+
+.nuevo-cliente-modal .modal-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.nuevo-cliente-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.nuevo-cliente-modal .modal-close {
+    background: transparent;
+    border: 0;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.25rem;
+}
+
+.nuevo-cliente-modal .modal-close:hover {
+    color: var(--text-primary);
+}
+
+.nuevo-cliente-modal .modal-hint,
+.nuevo-cliente-modal .modal-error {
+    margin: 0 0 1rem;
+    padding: 0.75rem;
+    border-radius: var(--border-radius-small);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.nuevo-cliente-modal .modal-hint {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+}
+
+.nuevo-cliente-modal .modal-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.client-suggestion-item.is-create {
+    justify-content: flex-start;
+    gap: 0.6rem;
+    color: var(--color-primary-light);
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .nuevo-cliente-modal .modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .nuevo-cliente-modal .modal-actions .btn-primary,
+    .nuevo-cliente-modal .modal-actions .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}
 </style>
 {% endblock %}
 
@@ -147,10 +267,10 @@
             <input type="hidden" id="id_cliente" name="id_cliente" required>
             
             <div class="form-group full-width">
-                <a href="{{ url_for('nuevo_cliente') }}" class="btn-secondary">
+                <button type="button" id="btnNuevoCliente" class="btn-secondary">
                     <i class="fas fa-user-plus"></i>
                     Nuevo Cliente
-                </a>
+                </button>
             </div>
         </div>
     </div>
@@ -182,6 +302,16 @@
             <div class="form-group">
                 <label for="fecha_entrega"><i class="fas fa-calendar"></i> Fecha de Entrega: *</label>
                 <input type="date" id="fecha_entrega" name="fecha_entrega" class="form-input" required>
+            </div>
+
+            <div class="form-group">
+                <label for="vendedora"><i class="fas fa-user-tie"></i> Vendedora:</label>
+                <input type="text" id="vendedora" name="vendedora" class="form-input" placeholder="Nombre de la vendedora">
+            </div>
+
+            <div class="form-group">
+                <label for="laboratorio"><i class="fas fa-flask"></i> Laboratorio:</label>
+                <input type="text" id="laboratorio" name="laboratorio" class="form-input" placeholder="Nombre del laboratorio">
             </div>
         </div>
     </div>
@@ -226,6 +356,7 @@
                 <label for="tipo_lente">Tipo de Lente (Diseño): *</label>
                 <select id="tipo_lente" name="tipo_lente" class="form-select" required>
                     <option value="">Seleccione...</option>
+                    <option value="monofocal">Monofocal</option>
                     <option value="bifocal">Bifocal</option>
                     <option value="multifocal">Multifocal</option>
                 </select>
@@ -438,6 +569,47 @@
     </div>
 </form>
 
+<!-- Modal: crear cliente sin salir de la orden -->
+<div id="nuevoClienteModal" class="nuevo-cliente-modal" aria-hidden="true">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="nuevoClienteTitle">
+        <div class="modal-header">
+            <h3 id="nuevoClienteTitle"><i class="fas fa-user-plus"></i> Nuevo Cliente</h3>
+            <button type="button" class="modal-close" id="closeNuevoClienteModal" aria-label="Cerrar modal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="formNuevoClienteRapido">
+            <div class="modal-body">
+                <p id="nuevoClienteHint" class="modal-hint" style="display:none;"></p>
+                <div id="nuevoClienteError" class="modal-error" style="display:none;"></div>
+                <div class="modal-grid">
+                    <div class="form-group">
+                        <label for="ncCi"><i class="fas fa-id-card"></i> Carnet de Identidad (Opcional):</label>
+                        <input type="text" id="ncCi" name="ci" class="form-input" placeholder="Ej: 12345678">
+                    </div>
+                    <div class="form-group">
+                        <label for="ncNombre"><i class="fas fa-user"></i> Nombre Completo: *</label>
+                        <input type="text" id="ncNombre" name="nombre_completo" class="form-input" placeholder="Ej: Juan Pérez" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ncTelefono"><i class="fas fa-phone"></i> Teléfono (Opcional):</label>
+                        <input type="tel" id="ncTelefono" name="telefono" class="form-input" placeholder="Ej: 78512345">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancelNuevoClienteModal">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="saveNuevoClienteBtn">
+                        <i class="fas fa-save"></i>
+                        Crear y usar cliente
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="loading" class="loading-overlay" style="display: none;">
     <div class="loading-spinner">
         <i class="fas fa-spinner fa-spin"></i>
@@ -447,5 +619,5 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{{ url_for('static', filename='js/nueva_orden.js') }}?v=5"></script>
+    <script src="{{ url_for('static', filename='js/nueva_orden.js') }}?v=6"></script>
 {% endblock %}

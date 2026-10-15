@@ -594,10 +594,14 @@ def nuevo_cliente():
     if request.method == 'POST':
         try:
             data = {
-                'ci': request.form.get('ci'),
-                'nombre_completo': request.form.get('nombre_completo'),
-                'telefono': request.form.get('telefono')
+                'ci': (request.form.get('ci') or '').strip(),
+                'nombre_completo': (request.form.get('nombre_completo') or '').strip(),
+                'telefono': (request.form.get('telefono') or '').strip()
             }
+
+            if not data['nombre_completo']:
+                return jsonify({'success': False, 'error': 'El nombre completo es obligatorio'}), 400
+
             cliente_id = fb.create_client(data)
             return jsonify({'success': True, 'cliente_id': cliente_id})
         except Exception as e:
@@ -631,13 +635,13 @@ def editar_cliente(cliente_id):
 
         if request.method == 'POST':
             data = {
-                'ci': request.form.get('ci'),
-                'nombre_completo': request.form.get('nombre_completo'),
-                'telefono': request.form.get('telefono')
+                'ci': (request.form.get('ci') or '').strip(),
+                'nombre_completo': (request.form.get('nombre_completo') or '').strip(),
+                'telefono': (request.form.get('telefono') or '').strip()
             }
 
-            if not all([data['ci'], data['nombre_completo'], data['telefono']]):
-                return jsonify({'success': False, 'error': 'Todos los campos son obligatorios'}), 400
+            if not data['nombre_completo']:
+                return jsonify({'success': False, 'error': 'El nombre completo es obligatorio'}), 400
 
             fb.update_client(cliente_id, data)
             return jsonify({'success': True, 'cliente_id': cliente_id})
@@ -720,6 +724,8 @@ def nueva_orden():
                 'fecha_creacion': datetime.utcnow().isoformat() + 'Z',
                 'fecha_entrega': request.form.get('fecha_entrega'),
                 'estado': 'Pendiente',
+                'vendedora': (request.form.get('vendedora') or '').strip(),
+                'laboratorio': (request.form.get('laboratorio') or '').strip(),
                 
                 # Specifications
                 'especificaciones': {
@@ -892,6 +898,8 @@ def editar_orden(orden_id):
             new_order_data = {
                 'id_sucursal': data.get('id_sucursal'),
                 'fecha_entrega': data.get('fecha_entrega'),
+                'vendedora': (data.get('vendedora') or '').strip(),
+                'laboratorio': (data.get('laboratorio') or '').strip(),
                 'id_empleado': orden.get('id_empleado') or data.get('id_empleado'),
                 'nro_correlativo': int(data.get('nro_correlativo') or orden.get('nro_correlativo') or 0),
                 
@@ -952,6 +960,10 @@ def editar_orden(orden_id):
                 cambios.append(f"Correlativo modificado a {new_order_data['nro_correlativo']}")
             if orden.get('fecha_entrega') != new_order_data['fecha_entrega']:
                 cambios.append(f"Fecha de entrega modificada a {new_order_data['fecha_entrega']}")
+            if (orden.get('vendedora') or '') != new_order_data['vendedora']:
+                cambios.append(f"Vendedora modificada a {new_order_data['vendedora'] or 'Sin asignar'}")
+            if (orden.get('laboratorio') or '') != new_order_data['laboratorio']:
+                cambios.append(f"Laboratorio modificado a {new_order_data['laboratorio'] or 'Sin asignar'}")
                 
             # Si hubo cambios en datos de lentes o montura de manera general
             if json.dumps(orden.get('graduacion'), sort_keys=True) != json.dumps(new_order_data['graduacion'], sort_keys=True):

@@ -97,9 +97,9 @@ Stores customer information and order history.
 ```
 
 **Fields:**
-- `ci` (string): National ID number
-- `nombre_completo` (string): Full name
-- `telefono` (string): Phone number
+- `ci` (string, optional): National ID number
+- `nombre_completo` (string, required): Full name
+- `telefono` (string, optional): Phone number
 - `historial_ordenes` (array): List of order correlative numbers
 
 **Indexes Required:**
@@ -143,6 +143,8 @@ Stores prescription orders with complete specifications.
   "fecha_creacion": "2026-02-03T11:24:00Z",
   "fecha_entrega": "2026-02-10",
   "estado": "pendiente",
+  "vendedora": "María López",
+  "laboratorio": "Laboratorio Visión",
   "especificaciones": {
     "material_base": "organico",
     "material_detalle": "antireflex",
@@ -190,13 +192,15 @@ Stores prescription orders with complete specifications.
 - `id_sucursal` (string): Reference to branch document ID
 - `id_cliente` (string): Reference to client document ID
 - `fecha_creacion` (string): Creation timestamp (ISO 8601)
-- `fecha_entrega` (string): Expected delivery date
+- `fecha_entrega` (string): Expected delivery date (past dates are allowed)
 - `estado` (string): Order status (`pendiente`, `en_proceso`, `listo`, `entregado`)
+- `vendedora` (string, optional): Salesperson name registered for the order
+- `laboratorio` (string, optional): Laboratory the order was sent to
 - `especificaciones` (object): Lens specifications
   - `material_base` (string): Base material (`organico`, `policarbonato`, `vidrio`, `otro`)
   - `material_detalle` (string): Material variant (e.g. `blanco`, `antireflex`, `blue_blocker`, `blue_care`, `blue_verde`, `fotocr_ar`, `fotocr_blue`, `transitions`, `fotocromatico`)
   - `material_otro` (string): Custom material text (when `material_base` is `otro`)
-  - `tipo_lente` (string): Lens type (`bifocal`, `multifocal`)
+  - `tipo_lente` (string): Lens type (`monofocal`, `bifocal`, `multifocal`)
   - `diseno_bifocal` (string): Bifocal design (`flap_top`, `invisible`)
   - `marca_multifocal` (string): Multifocal brand (`kodak`, `varilux`, `evolution_xperience`)
   - `modelo_multifocal` (string): Multifocal model (`unique_hd`, `easy`, `precise`, `physio_30`, `physio`, `confort`, `dynamic`, `evolution_essential`, `evolution_pro`, `evolution_pro_2_0`, `xperience_ia`)
@@ -375,7 +379,7 @@ gunicorn -b 0.0.0.0:8080 app:app
 
 **Create Client** (`/clientes/nuevo`)
 - Register new clients
-- Fields: CI, full name, phone
+- Fields: full name (required), CI and phone (optional)
 - Automatic validation
 
 **View Client** (`/clientes/<id>`)
@@ -383,9 +387,9 @@ gunicorn -b 0.0.0.0:8080 app:app
 - Order history
 - Contact information
 
-**Search Client API** (`/api/clientes/buscar?ci=<ci>`)
-- Search by national ID
-- Returns client data or 404
+**Search Client API** (`/api/clientes/buscar`)
+- `?ci=<ci>` — exact match by national ID, returns a single client or 404
+- `?q=<text>` — partial match on name, CI or phone, returns a list of up to 10 matches (a single `cliente` object when there is exactly one), or 404
 
 ### Order Management
 
@@ -395,10 +399,13 @@ gunicorn -b 0.0.0.0:8080 app:app
 - Sort by date
 
 **Create Order** (`/ordenes/nueva`)
-- Client search by CI
+- Client search by CI or name (live suggestions while typing)
+- Create a new client inline when the search finds no match, then continue with the same order
 - Prescription entry (distance and near)
 - Lens specifications
 - Frame details
+- Vendedora and Laboratorio free-text fields
+- Delivery date accepts past dates
 - Payment information
 - Automatic order number generation
 

@@ -88,6 +88,16 @@
                 <label for="fecha_entrega"><i class="fas fa-calendar"></i> Fecha de Entrega: *</label>
                 <input type="date" id="fecha_entrega" name="fecha_entrega" class="form-input" required>
             </div>
+
+            <div class="form-group">
+                <label for="vendedora"><i class="fas fa-user-tie"></i> Vendedora:</label>
+                <input type="text" id="vendedora" name="vendedora" class="form-input" placeholder="Nombre de la vendedora">
+            </div>
+
+            <div class="form-group">
+                <label for="laboratorio"><i class="fas fa-flask"></i> Laboratorio:</label>
+                <input type="text" id="laboratorio" name="laboratorio" class="form-input" placeholder="Nombre del laboratorio">
+            </div>
         </div>
     </div>
 
@@ -131,6 +141,7 @@
                 <label for="tipo_lente">Tipo de Lente (Diseño): *</label>
                 <select id="tipo_lente" name="tipo_lente" class="form-select" required>
                     <option value="">Seleccione...</option>
+                    <option value="monofocal">Monofocal</option>
                     <option value="bifocal">Bifocal</option>
                     <option value="multifocal">Multifocal</option>
                 </select>

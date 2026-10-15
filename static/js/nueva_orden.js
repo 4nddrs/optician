@@ -82,6 +82,163 @@ function fillClientFields(cliente, keepQuery = false) {
     hideClientSuggestions();
 }
 
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Interpreta el texto buscado para pre-cargar el formulario de cliente
+function buildClienteFromSearch(value) {
+    const query = (value || '').trim();
+    if (!query) return {};
+    if (/^[0-9][0-9\-.\s]*$/.test(query)) {
+        return { ci: query };
+    }
+    return { nombre_completo: query };
+}
+
+function openNuevoClienteModal(prefill, hint) {
+    const modal = document.getElementById('nuevoClienteModal');
+    if (!modal) return;
+
+    const datos = prefill || {};
+
+    document.getElementById('ncCi').value = datos.ci || '';
+    document.getElementById('ncNombre').value = datos.nombre_completo || '';
+    document.getElementById('ncTelefono').value = datos.telefono || '';
+
+    const hintEl = document.getElementById('nuevoClienteHint');
+    if (hintEl) {
+        hintEl.textContent = hint || '';
+        hintEl.style.display = hint ? 'block' : 'none';
+    }
+
+    const errorEl = document.getElementById('nuevoClienteError');
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.style.display = 'none';
+    }
+
+    hideClientSuggestions();
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+
+    const nombreInput = document.getElementById('ncNombre');
+    if (nombreInput) {
+        nombreInput.focus();
+    }
+}
+
+function closeNuevoClienteModal() {
+    const modal = document.getElementById('nuevoClienteModal');
+    if (!modal) return;
+
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function showNuevoClienteError(message) {
+    const errorEl = document.getElementById('nuevoClienteError');
+    if (!errorEl) return;
+
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+}
+
+async function crearClienteDesdeOrden(event) {
+    event.preventDefault();
+
+    const saveBtn = document.getElementById('saveNuevoClienteBtn');
+    const originalHtml = saveBtn ? saveBtn.innerHTML : '';
+
+    const datos = {
+        ci: document.getElementById('ncCi').value.trim(),
+        nombre_completo: document.getElementById('ncNombre').value.trim(),
+        telefono: document.getElementById('ncTelefono').value.trim()
+    };
+
+    if (!datos.nombre_completo) {
+        showNuevoClienteError('El nombre completo es obligatorio');
+        return;
+    }
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('ci', datos.ci);
+        formData.append('nombre_completo', datos.nombre_completo);
+        formData.append('telefono', datos.telefono);
+
+        const response = await fetch('/clientes/nuevo', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+
+        if (!result.success) {
+            showNuevoClienteError(result.error || 'No se pudo crear el cliente');
+            return;
+        }
+
+        // El cliente queda seleccionado en la orden y el formulario de la orden no se toca
+        fillClientFields({
+            id: result.cliente_id,
+            ci: datos.ci,
+            nombre_completo: datos.nombre_completo,
+            telefono: datos.telefono
+        }, true);
+
+        closeNuevoClienteModal();
+
+        if (typeof showNotification === 'function') {
+            showNotification('Cliente registrado. Continúa con la orden.', 'success');
+        }
+    } catch (error) {
+        console.error('Error al crear el cliente:', error);
+        showNuevoClienteError('Error de conexión al crear el cliente');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalHtml;
+        }
+    }
+}
+
+// Sugerencia para crear el cliente cuando la búsqueda no devuelve resultados
+function renderNoResultsSuggestion(query) {
+    const container = document.getElementById('clientSuggestions');
+    if (!container) return;
+
+    clientSuggestions = [];
+
+    const querySeguro = escapeHtml(query);
+    container.innerHTML = `
+        <button type="button" class="client-suggestion-item is-create" id="crearClienteSuggestion">
+            <i class="fas fa-user-plus"></i>
+            <span>No se encontró "${querySeguro}". Crear cliente</span>
+        </button>
+    `;
+    container.style.display = 'block';
+
+    const botonCrear = document.getElementById('crearClienteSuggestion');
+    if (botonCrear) {
+        botonCrear.addEventListener('click', function() {
+            openNuevoClienteModal(
+                buildClienteFromSearch(query),
+                `No se encontró ningún cliente con "${query}". Regístralo aquí para continuar con la orden.`
+            );
+        });
+    }
+}
+
 async function buscarClientesEnVivo(query) {
     const value = (query || '').trim();
     if (!value) {
@@ -94,16 +251,18 @@ async function buscarClientesEnVivo(query) {
         const response = await fetch(`/api/clientes/buscar?q=${encodeURIComponent(value)}`);
         const result = await response.json();
 
-        if (result.success) {
-            if (result.clientes && result.clientes.length > 0) {
-                renderClientSuggestions(result.clientes);
-            } else {
-                hideClientSuggestions();
-                clearClientSelection({ keepQuery: true });
-            }
+        if (result.success && result.clientes && result.clientes.length > 0) {
+            renderClientSuggestions(result.clientes);
+            return;
+        }
+
+        clearClientSelection({ keepQuery: true });
+
+        if (response.status === 404) {
+            // Sin coincidencias: ofrecer crear el cliente sin salir de la vista
+            renderNoResultsSuggestion(value);
         } else {
             hideClientSuggestions();
-            clearClientSelection({ keepQuery: true });
         }
     } catch (error) {
         console.error('Error al buscar clientes:', error);
@@ -115,10 +274,10 @@ async function buscarCliente() {
     console.log('buscarCliente function called');
     const inputCI = document.getElementById('buscarCliente');
     const btnBuscar = document.getElementById('btnBuscarCliente');
-    const ci = inputCI.value.trim();
+    const criterio = inputCI.value.trim();
     
-    if (!ci) {
-        alert('Por favor ingrese un CI');
+    if (!criterio) {
+        alert('Por favor ingrese un CI o nombre');
         inputCI.focus();
         return;
     }
@@ -135,7 +294,7 @@ async function buscarCliente() {
     inputCI.disabled = true;
     
     try {
-        const response = await fetch(`/api/clientes/buscar?ci=${encodeURIComponent(ci)}`);
+        const response = await fetch(`/api/clientes/buscar?q=${encodeURIComponent(criterio)}`);
         const result = await response.json();
         
         if (result.success && result.cliente) {
@@ -148,10 +307,16 @@ async function buscarCliente() {
             } else {
                 alert('Cliente encontrado: ' + result.cliente.nombre_completo);
             }
+        } else if (result.success && result.clientes && result.clientes.length > 0) {
+            // Varias coincidencias: el usuario elige
+            renderClientSuggestions(result.clientes);
         } else {
-            alert('Cliente no encontrado. Por favor registre el cliente primero.');
+            // No existe: se crea en esta misma vista y se continúa con la orden
             clearClientSelection({ keepQuery: true });
-            inputCI.focus();
+            openNuevoClienteModal(
+                buildClienteFromSearch(criterio),
+                `No se encontró ningún cliente con "${criterio}". Regístralo aquí para continuar con la orden.`
+            );
         }
     } catch (error) {
         console.error('Error al buscar cliente:', error);
@@ -181,15 +346,6 @@ function calcularSaldo() {
 
 // Make function globally accessible
 window.calcularSaldo = calcularSaldo;
-
-// Set minimum delivery date (today)
-document.addEventListener('DOMContentLoaded', function() {
-    const fechaEntrega = document.getElementById('fecha_entrega');
-    if (fechaEntrega) {
-        const hoy = new Date().toISOString().split('T')[0];
-        fechaEntrega.min = hoy;
-    }
-});
 
 // Validate and submit form
 document.addEventListener('DOMContentLoaded', function() {
@@ -398,6 +554,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 buscarCliente();
             }
         });
+    }
+});
+
+// Modal para crear un cliente sin salir de la orden
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('nuevoClienteModal');
+    const btnNuevoCliente = document.getElementById('btnNuevoCliente');
+    const closeBtn = document.getElementById('closeNuevoClienteModal');
+    const cancelBtn = document.getElementById('cancelNuevoClienteModal');
+    const formNuevoCliente = document.getElementById('formNuevoClienteRapido');
+
+    if (btnNuevoCliente) {
+        btnNuevoCliente.addEventListener('click', function(e) {
+            e.preventDefault();
+            const buscarInput = document.getElementById('buscarCliente');
+            openNuevoClienteModal(buildClienteFromSearch(buscarInput ? buscarInput.value : ''));
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeNuevoClienteModal);
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeNuevoClienteModal);
+    }
+
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeNuevoClienteModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && modal.classList.contains('show')) {
+            closeNuevoClienteModal();
+        }
+    });
+
+    if (formNuevoCliente) {
+        formNuevoCliente.addEventListener('submit', crearClienteDesdeOrden);
     }
 });
 

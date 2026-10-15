@@ -210,6 +210,12 @@
             <div class="doc-info-line"><span class="label">Orden ID:</span> {{ orden.id_orden }}</div>
             <div class="doc-info-line"><span class="label">Fecha:</span> {{ orden.fecha_creacion[:10] if orden.fecha_creacion else 'N/A' }}</div>
             <div class="doc-info-line"><span class="label">Entrega:</span> {{ orden.fecha_entrega if orden.fecha_entrega else 'Por determinar' }}</div>
+            {% if orden.vendedora %}
+            <div class="doc-info-line"><span class="label">Vendedora:</span> {{ orden.vendedora }}</div>
+            {% endif %}
+            {% if orden.laboratorio %}
+            <div class="doc-info-line"><span class="label">Laboratorio:</span> {{ orden.laboratorio }}</div>
+            {% endif %}
         </div>
         
         <!-- CLIENTE -->
