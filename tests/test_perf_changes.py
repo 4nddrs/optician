@@ -249,7 +249,9 @@ class S4_RouteEquivalenceTest(unittest.TestCase):
             fb.get_user_by_id = _user
             html = self._client().get(f"/ordenes/{base['id']}").get_data(as_text=True)
             self.assertEqual(calls['n'], 0)
-            self.assertIn('FALLBACK-NAME', html)
+            # El detalle ya no pinta el nombre del empleado: se quito el campo
+            # "Atendido por" (redundante con Sucursal y Vendedora).
+            self.assertNotIn('FALLBACK-NAME', html)
         finally:
             fb.get_order_by_id, fb.get_client_by_id, fb.get_branch_by_id, fb.get_user_by_id = real
 
