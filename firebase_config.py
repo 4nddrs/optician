@@ -228,7 +228,8 @@ def get_orders_page(estado=None, sucursal=None, q=None, page=1, page_size=None):
     coincidencias y los metadatos de paginación que consume la plantilla.
 
     Invariante: filtrar por un estado devuelve TODAS las órdenes de ese estado
-    repartidas en páginas; el conjunto nunca se recorta con MAX_ORDERS_LIMIT.
+    repartidas en páginas; el conjunto filtrado nunca se recorta. Sin filtros la
+    lectura se acota a MAX_ORDERS_LIMIT y se cachea con TTL, como antes.
 
     Nota de índices (medido): Firestore exige un índice compuesto para combinar
     `where('estado', '==', ...)` con `order_by('fecha_creacion')`. Ese índice no
@@ -255,23 +256,25 @@ def get_orders_page(estado=None, sucursal=None, q=None, page=1, page_size=None):
     if estado and estado not in ESTADOS_ORDEN:
         estado = ''
 
-    consulta = db.collection('ordenes_trabajo')
-    if estado:
-        consulta = consulta.where('estado', '==', estado)
-    if sucursal:
-        consulta = consulta.where('id_sucursal', '==', sucursal)
-
     con_filtros = bool(estado or sucursal or q)
-    if not con_filtros:
-        # Sin filtros el orden nativo por fecha_creacion usa el índice de campo
-        # único automático y no necesita índice compuesto.
-        consulta = consulta.order_by('fecha_creacion', direction=firestore.Query.DESCENDING)
 
-    ordenes = []
-    for doc in consulta.stream():
-        orden = doc.to_dict()
-        orden['id'] = doc.id
-        ordenes.append(orden)
+    # Sin `where()` nada acota la lectura en Firestore y `consulta.stream()`
+    # recorría `ordenes_trabajo` ENTERA en cada carga de página: se reutiliza la
+    # lectura acotada y cacheada de get_all_orders() (MAX_ORDERS_LIMIT + TTL).
+    if not (estado or sucursal):
+        ordenes = list(get_all_orders())
+    else:
+        consulta = db.collection('ordenes_trabajo')
+        if estado:
+            consulta = consulta.where('estado', '==', estado)
+        if sucursal:
+            consulta = consulta.where('id_sucursal', '==', sucursal)
+
+        ordenes = []
+        for doc in consulta.stream():
+            orden = doc.to_dict()
+            orden['id'] = doc.id
+            ordenes.append(orden)
 
     if q:
         busqueda = q.lower()
