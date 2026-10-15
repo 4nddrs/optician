@@ -72,41 +72,26 @@ async function eliminarOrden() {
     }
 }
 
-// Filter orders
+// Filters are applied server-side (S7). The filter controls are a GET form, so
+// the server filters and paginates and the browser just reloads the page. The
+// old client-side filter hid rows of the already-rendered page, which would
+// silently hide matches outside the visible page once pagination exists.
 document.addEventListener('DOMContentLoaded', function() {
-    const filterEstado = document.getElementById('filterEstado');
-    const filterSucursal = document.getElementById('filterSucursal');
-    const searchOrden = document.getElementById('searchOrden');
-    
-    if (filterEstado && filterSucursal && searchOrden) {
-        function filtrarOrdenes() {
-            const estadoSeleccionado = filterEstado.value.toLowerCase();
-            const sucursalSeleccionada = filterSucursal.value.toLowerCase();
-            const busqueda = searchOrden.value.toLowerCase();
-            
-            const rows = document.querySelectorAll('#ordenesTableBody tr');
-            
-            rows.forEach(row => {
-                const estado = row.dataset.estado ? row.dataset.estado.toLowerCase() : '';
-                const sucursal = row.dataset.sucursal ? row.dataset.sucursal.toLowerCase() : '';
-                const ordenId = row.dataset.ordenId ? row.dataset.ordenId.toLowerCase() : '';
-                
-                const matchEstado = !estadoSeleccionado || estado === estadoSeleccionado;
-                const matchSucursal = !sucursalSeleccionada || sucursal === sucursalSeleccionada;
-                const matchBusqueda = !busqueda || ordenId.includes(busqueda);
-                
-                if (matchEstado && matchSucursal && matchBusqueda) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+    const formFiltros = document.getElementById('formFiltros');
+    if (!formFiltros) {
+        return;
+    }
+
+    // Changing a select submits the form right away; the search box submits
+    // with the "Filtrar" button or by pressing Enter.
+    ['filterEstado', 'filterSucursal'].forEach(function(id) {
+        const select = document.getElementById(id);
+        if (select) {
+            select.addEventListener('change', function() {
+                formFiltros.submit();
             });
         }
-        
-        filterEstado.addEventListener('change', filtrarOrdenes);
-        filterSucursal.addEventListener('change', filtrarOrdenes);
-        searchOrden.addEventListener('input', filtrarOrdenes);
-    }
+    });
 });
 
 // Send WhatsApp message

@@ -2,6 +2,48 @@
 
 {% block title %}Órdenes de Trabajo - Óptica{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Formulario de filtros (S7): al enviar por GET recarga /ordenes con los
+       filtros y vuelve a la página 1. */
+    .filters-form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: var(--spacing-md);
+        width: 100%;
+    }
+
+    .filters-form .filter-group {
+        flex: 1;
+    }
+
+    .filters-form .filter-group-actions {
+        flex: 0 0 auto;
+    }
+
+    /* Controles de paginación (S7). */
+    .pagination {
+        margin-top: var(--spacing-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
+    }
+
+    .pagination .pagination-info {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .pagination .pagination-disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div class="header-content">
@@ -20,31 +62,43 @@
 </div>
 
 <div class="filters-section">
-    <div class="filter-group">
-        <label for="filterEstado"><i class="fas fa-filter"></i> Estado:</label>
-        <select id="filterEstado" class="form-select">
-            <option value="">Todos</option>
-            <option value="Pendiente">Pendiente</option>
-            <option value="Progreso">En Proceso</option>
-            <option value="Listo">Listo</option>
-            <option value="Entregado">Entregado</option>
-        </select>
-    </div>
-    
-    <div class="filter-group">
-        <label for="filterSucursal"><i class="fas fa-building"></i> Sucursal:</label>
-        <select id="filterSucursal" class="form-select">
-            <option value="">Todas</option>
-            {% for sucursal in sucursales %}
-            <option value="{{ sucursal.id }}">{{ sucursal.nombre }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    
-    <div class="filter-group">
-        <label for="searchOrden"><i class="fas fa-search"></i> Buscar:</label>
-        <input type="text" id="searchOrden" class="form-input" placeholder="ID de orden...">
-    </div>
+    <!-- S7: los filtros se aplican en el servidor. El formulario hace un GET a
+         /ordenes y no incluye `page`, así que cambiar un filtro vuelve a la
+         página 1. -->
+    <form id="formFiltros" method="get" action="{{ url_for('ordenes') }}" class="filters-form">
+        <div class="filter-group">
+            <label for="filterEstado"><i class="fas fa-filter"></i> Estado:</label>
+            <select id="filterEstado" name="estado" class="form-select">
+                <option value="">Todos</option>
+                <option value="Pendiente" {% if filtros.estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                <option value="Progreso" {% if filtros.estado == 'Progreso' %}selected{% endif %}>En Proceso</option>
+                <option value="Listo" {% if filtros.estado == 'Listo' %}selected{% endif %}>Listo</option>
+                <option value="Entregado" {% if filtros.estado == 'Entregado' %}selected{% endif %}>Entregado</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="filterSucursal"><i class="fas fa-building"></i> Sucursal:</label>
+            <select id="filterSucursal" name="sucursal" class="form-select">
+                <option value="">Todas</option>
+                {% for sucursal in sucursales %}
+                <option value="{{ sucursal.id }}" {% if filtros.sucursal == sucursal.id %}selected{% endif %}>{{ sucursal.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="searchOrden"><i class="fas fa-search"></i> Buscar:</label>
+            <input type="text" id="searchOrden" name="q" class="form-input" placeholder="ID de orden..." value="{{ filtros.q }}">
+        </div>
+
+        <div class="filter-group filter-group-actions">
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-search"></i>
+                Filtrar
+            </button>
+        </div>
+    </form>
 </div>
 
 <div class="content-section">
@@ -119,6 +173,27 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+
+    <!-- Controles de paginación (S7): conservan los filtros activos al navegar. -->
+    <div class="pagination">
+        {% if paginacion.has_prev %}
+        <a class="btn-secondary" href="{{ url_for('ordenes', estado=filtros.estado, sucursal=filtros.sucursal, q=filtros.q, page=paginacion.page - 1) }}">
+            <i class="fas fa-chevron-left"></i> Anterior
+        </a>
+        {% else %}
+        <span class="btn-secondary pagination-disabled"><i class="fas fa-chevron-left"></i> Anterior</span>
+        {% endif %}
+
+        <span class="pagination-info">Página {{ paginacion.page }} de {{ paginacion.total_pages }} ({{ paginacion.total }} órdenes)</span>
+
+        {% if paginacion.has_next %}
+        <a class="btn-secondary" href="{{ url_for('ordenes', estado=filtros.estado, sucursal=filtros.sucursal, q=filtros.q, page=paginacion.page + 1) }}">
+            Siguiente <i class="fas fa-chevron-right"></i>
+        </a>
+        {% else %}
+        <span class="btn-secondary pagination-disabled">Siguiente <i class="fas fa-chevron-right"></i></span>
+        {% endif %}
     </div>
 </div>
 

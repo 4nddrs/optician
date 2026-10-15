@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, g, abort
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, date
+from zoneinfo import ZoneInfo
 import firebase_config as fb
 import firebase_auth as fa
 import firebase_admin
@@ -7,6 +8,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from functools import wraps
+from concurrent.futures import ThreadPoolExecutor
 
 # Load environment variables
 load_dotenv()
@@ -107,6 +109,13 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=int(os.getenv('SESSION
 
 @app.after_request
 def add_no_cache_headers(response):
+    # Los estáticos se tratan aparte: con `no-store` el navegador volvía a descargar
+    # CSS y JS completos en cada navegación. Con `no-cache` los conserva y solo
+    # revalida por ETag (304 sin cuerpo), así que siguen frescos sin re-descargarse.
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'no-cache'
+        return response
+
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
@@ -121,6 +130,99 @@ app.jinja_env.globals['FIREBASE_CONFIG'] = {
     'messagingSenderId': os.getenv('FIREBASE_MESSAGING_SENDER_ID'),
     'appId': os.getenv('FIREBASE_APP_ID')
 }
+
+# Vendedoras de la tienda. Fuente única para los formularios de orden: se expone
+# a las plantillas como VENDEDORAS y se resuelve con _vendedora_del_formulario.
+VENDEDORAS = [
+    'Mía',
+    'Dagmar',
+    'Camila',
+    'Noe Cano',
+    'Sissy',
+    'Cristian',
+    'Abigail',
+    'Stefani Illin',
+    'Estefanny Rodríguez',
+    'Dennis',
+    'Vianca',
+]
+
+# Valor del combo que significa "escribir una vendedora propia". Se usa un
+# centinela en vez de un nombre para que nunca choque con una vendedora real.
+VENDEDORA_OTRO = '__otro__'
+
+app.jinja_env.globals['VENDEDORAS'] = VENDEDORAS
+app.jinja_env.globals['VENDEDORA_OTRO'] = VENDEDORA_OTRO
+
+
+def _vendedora_del_formulario(form):
+    """Resuelve la vendedora elegida en el combo de un formulario de orden.
+
+    Si se eligió la opción "Otro", vale lo que se haya escrito en el campo libre.
+    En cualquier otro caso vale la opción del combo y el campo libre se ignora,
+    para que un valor viejo no pise la elección.
+    """
+    elegida = (form.get('vendedora') or '').strip()
+    if elegida == VENDEDORA_OTRO:
+        return (form.get('vendedora_otro') or '').strip()
+    return elegida
+
+# Las vistas hacen varias lecturas independientes a Firestore y cada una cuesta
+# ~300 ms. Ejecutarlas en paralelo hace que el costo total sea el de la más lenta
+# en vez de la suma de todas.
+_read_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix='firestore-read')
+
+
+def _parallel(*fns):
+    """Ejecuta lecturas independientes en paralelo y devuelve los resultados en orden."""
+    futures = [_read_pool.submit(fn) for fn in fns]
+    return [future.result() for future in futures]
+
+
+# Zona horaria de la tienda. Las fechas que captura el usuario son locales, así
+# que "hoy" debe calcularse en esta zona y no en UTC: Bolivia es UTC-4, de modo
+# que entre las 20:00 y la medianoche UTC ya es el día siguiente.
+TZ_TIENDA = os.getenv('APP_TIMEZONE', 'America/La_Paz')
+
+
+def _hoy_tienda():
+    """Fecha de hoy en la zona horaria de la tienda."""
+    return datetime.now(ZoneInfo(TZ_TIENDA)).date()
+
+
+def _estado_inicial_orden(fecha_entrega, hoy=None):
+    """Estado con el que nace una orden según su fecha de entrega.
+
+    Si la fecha de entrega ya pasó, la orden es un registro histórico y nace
+    'Entregado'. Una entrega programada para hoy todavía está pendiente. Una
+    fecha ausente o inválida cae a 'Pendiente', el estado por defecto de una
+    orden nueva, para que un dato mal formado nunca la marque como entregada.
+    """
+    if not fecha_entrega:
+        return 'Pendiente'
+    try:
+        fecha = date.fromisoformat(str(fecha_entrega).strip())
+    except (TypeError, ValueError):
+        return 'Pendiente'
+    return 'Entregado' if fecha < (hoy or _hoy_tienda()) else 'Pendiente'
+
+
+def _resumen_ordenes(totales):
+    """Resumen del dashboard a partir de los totales agregados.
+
+    `pendientes` se deriva como total - entregadas, de modo que la invariante
+    total == pendientes + entregadas se cumple por construcción y no depende del
+    tope MAX_ORDERS_LIMIT.
+    """
+    totales = totales or {}
+    total = int(totales.get('total') or 0)
+    entregadas = int(totales.get('entregadas') or 0)
+    return {
+        'total': total,
+        'pendientes': max(0, total - entregadas),
+        'entregadas': entregadas,
+    }
+
 
 # ========================================
 # DECORADORES
@@ -522,25 +624,26 @@ def obtener_sucursales():
 @login_required
 def index():
     try:
-        ordenes = fb.get_all_orders()
-        sucursales = fb.get_all_branches()
-        clientes = fb.get_all_clients()
-        
+        ordenes, sucursales, clientes, totales = _parallel(
+            fb.get_all_orders, fb.get_all_branches, fb.get_all_clients,
+            fb.get_order_totals
+        )
+
         # Create a dictionary for quick client lookup
         clientes_dict = {cliente['id']: cliente for cliente in clientes}
-        
-        # Statistics
-        total_ordenes = len(ordenes)
-        ordenes_pendientes = len([o for o in ordenes if o.get('estado') == 'Pendiente'])
-        ordenes_entregadas = len([o for o in ordenes if o.get('estado') == 'Entregado'])
-        
+
+        # Statistics: dos agregaciones count() en paralelo (total y entregadas),
+        # así no dependen del tope MAX_ORDERS_LIMIT (S4) y la invariante
+        # total == pendientes + entregadas se cumple por construcción (S2).
+        resumen = _resumen_ordenes(totales)
+
         return render_template('index.html', 
                              ordenes=ordenes[:10],  # Últimas 10 órdenes
                              sucursales=sucursales,
                              clientes_dict=clientes_dict,
-                             total_ordenes=total_ordenes,
-                             ordenes_pendientes=ordenes_pendientes,
-                             ordenes_entregadas=ordenes_entregadas)
+                             total_ordenes=resumen['total'],
+                             ordenes_pendientes=resumen['pendientes'],
+                             ordenes_entregadas=resumen['entregadas'])
     except Exception as e:
         return render_template('error.html', error=str(e))
 
@@ -557,9 +660,9 @@ def control():
 @admin_required
 def api_control_datos():
     try:
-        ordenes = fb.get_all_orders()
-        sucursales = fb.get_all_branches()
-        usuarios = fa.obtener_usuarios_activos()
+        ordenes, sucursales, usuarios = _parallel(
+            fb.get_all_orders, fb.get_all_branches, fa.obtener_usuarios_activos
+        )
         
         # Convertir timestamps si los hay
         usuarios_safe = []
@@ -699,14 +802,34 @@ def buscar_cliente():
 @login_required
 def ordenes():
     try:
-        ordenes = fb.get_all_orders()
-        sucursales = fb.get_all_branches()
-        clientes = fb.get_all_clients()
-        
+        # Filtros y paginación en el servidor (S7): el cliente solo arma el GET.
+        estado = (request.args.get('estado') or '').strip()
+        sucursal = (request.args.get('sucursal') or '').strip()
+        busqueda = (request.args.get('q') or '').strip()
+        try:
+            page = int(request.args.get('page', 1))
+        except (TypeError, ValueError):
+            page = 1
+
+        paginacion, sucursales, clientes = _parallel(
+            lambda: fb.get_orders_page(
+                estado=estado, sucursal=sucursal, q=busqueda, page=page
+            ),
+            fb.get_all_branches,
+            fb.get_all_clients,
+        )
+
         # Create a dictionary for quick client lookup
         clientes_dict = {cliente['id']: cliente for cliente in clientes}
-        
-        return render_template('ordenes.html', ordenes=ordenes, sucursales=sucursales, clientes_dict=clientes_dict)
+
+        return render_template(
+            'ordenes.html',
+            ordenes=paginacion['ordenes'],
+            sucursales=sucursales,
+            clientes_dict=clientes_dict,
+            paginacion=paginacion,
+            filtros={'estado': estado, 'sucursal': sucursal, 'q': busqueda},
+        )
     except Exception as e:
         return render_template('error.html', error=str(e))
 
@@ -721,10 +844,13 @@ def nueva_orden():
                 'id_cliente': request.form.get('id_cliente'),
                 'id_empleado': request.form.get('id_empleado', ''),
                 'nombre_usuario': request.form.get('nombre_empleado', 'Desconocido'),
-                'fecha_creacion': datetime.utcnow().isoformat() + 'Z',
+                # S8: hora UTC timezone-aware; se conserva el formato ISO con sufijo Z.
+                'fecha_creacion': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
                 'fecha_entrega': request.form.get('fecha_entrega'),
-                'estado': 'Pendiente',
-                'vendedora': (request.form.get('vendedora') or '').strip(),
+                # Una orden registrada con fecha de entrega ya pasada es un
+                # registro histórico: nace 'Entregado' en vez de 'Pendiente'.
+                'estado': _estado_inicial_orden(request.form.get('fecha_entrega')),
+                'vendedora': _vendedora_del_formulario(request.form),
                 'laboratorio': (request.form.get('laboratorio') or '').strip(),
                 
                 # Specifications
@@ -775,7 +901,8 @@ def nueva_orden():
                 
                 # Historial inicial
                 'historial': [{
-                    'fecha': datetime.utcnow().isoformat() + 'Z',
+                    # S8: hora UTC timezone-aware; se conserva el formato ISO con sufijo Z.
+                    'fecha': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
                     'id_usuario': request.form.get('id_empleado', ''),
                     'nombre_usuario': request.form.get('nombre_empleado', 'Desconocido'),
                     'cambios': ['Creación de la orden']
@@ -793,8 +920,7 @@ def nueva_orden():
     
     # GET - Show form
     try:
-        clientes = fb.get_all_clients()
-        sucursales = fb.get_all_branches()
+        clientes, sucursales = _parallel(fb.get_all_clients, fb.get_all_branches)
         return render_template('nueva_orden.html', clientes=clientes, sucursales=sucursales)
     except Exception as e:
         return render_template('error.html', error=str(e))
@@ -810,13 +936,15 @@ def ver_orden(orden_id):
         if not _user_can_access_order(orden):
             return _forbid_order_access()
         
-        cliente = fb.get_client_by_id(orden.get('id_cliente'))
-        sucursal = fb.get_branch_by_id(orden.get('id_sucursal'))
-        
         # Búsqueda optimizada del empleado
         empleado_id = orden.get('id_empleado')
+        cliente, sucursal, empleado = _parallel(
+            lambda: fb.get_client_by_id(orden.get('id_cliente')),
+            lambda: fb.get_branch_by_id(orden.get('id_sucursal')),
+            (lambda: fb.get_user_by_id(empleado_id)) if empleado_id else (lambda: None),
+        )
+
         if empleado_id:
-            empleado = fb.get_user_by_id(empleado_id)
             if empleado:
                 orden['nombre_empleado'] = empleado.get('nombre', 'Nombre no encontrado')
             else:
@@ -848,8 +976,10 @@ def descargar_pdf_orden(orden_id):
             return _forbid_order_access()
         
         # Obtener cliente y sucursal
-        cliente = fb.get_client_by_id(orden.get('id_cliente'))
-        sucursal = fb.get_branch_by_id(orden.get('id_sucursal'))
+        cliente, sucursal = _parallel(
+            lambda: fb.get_client_by_id(orden.get('id_cliente')),
+            lambda: fb.get_branch_by_id(orden.get('id_sucursal')),
+        )
         
         # Generar PDF
         pdf_buffer, filename = generar_pdf_orden(orden, cliente, sucursal)
@@ -880,8 +1010,10 @@ def editar_orden(orden_id):
         #         return _forbid_order_access('Solo puedes editar órdenes de tu sucursal')
         
         if request.method == 'GET':
-            sucursales = fb.get_all_branches()
-            cliente = fb.get_client_by_id(orden.get('id_cliente'))
+            sucursales, cliente = _parallel(
+                fb.get_all_branches,
+                lambda: fb.get_client_by_id(orden.get('id_cliente')),
+            )
             
             # Pasar diccionarios seguros a JSON para pre-popular
             return render_template('editar_orden.html', 
@@ -1010,10 +1142,10 @@ def actualizar_estado(orden_id):
         if not _user_can_access_order(orden):
             return _forbid_order_access()
 
-        new_status = request.json.get('estado')
-        if not new_status:
-            return jsonify({'success': False, 'error': 'Estado requerido'}), 400
-        
+        new_status = (request.json or {}).get('estado')
+        if new_status not in fb.ESTADOS_ORDEN:
+            return jsonify({'success': False, 'error': 'Estado inválido'}), 400
+
         fb.update_order_status(orden_id, new_status)
         return jsonify({'success': True})
     except Exception as e:

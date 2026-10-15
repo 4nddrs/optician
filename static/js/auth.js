@@ -141,7 +141,10 @@ function initAuth() {
                 currentUser = user;
 
                 try {
-                    const idToken = await user.getIdToken(true);
+                    // getIdToken() sin argumento usa el token cacheado por el SDK y lo
+                    // refresca solo cuando está por expirar. Con getIdToken(true) se forzaba
+                    // un refresh por red en CADA carga de página.
+                    const idToken = await user.getIdToken();
                     const sessionResult = await syncSessionWithBackend(idToken);
                     userProfile = sessionResult.usuario || null;
 

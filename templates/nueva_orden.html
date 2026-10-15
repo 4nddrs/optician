@@ -306,7 +306,16 @@
 
             <div class="form-group">
                 <label for="vendedora"><i class="fas fa-user-tie"></i> Vendedora:</label>
-                <input type="text" id="vendedora" name="vendedora" class="form-input" placeholder="Nombre de la vendedora">
+                <select id="vendedora" name="vendedora" class="form-select" data-otro="{{ VENDEDORA_OTRO }}">
+                    <option value="">Sin asignar</option>
+                    {% for vendedora in VENDEDORAS %}
+                    <option value="{{ vendedora }}">{{ vendedora }}</option>
+                    {% endfor %}
+                    <option value="{{ VENDEDORA_OTRO }}">Otro (escribir)…</option>
+                </select>
+                <input type="text" id="vendedoraOtro" name="vendedora_otro" class="form-input"
+                       placeholder="Escribe el nombre de la vendedora"
+                       style="display: none; margin-top: 0.5rem;">
             </div>
 
             <div class="form-group">
@@ -619,5 +628,5 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{{ url_for('static', filename='js/nueva_orden.js') }}?v=6"></script>
+    <script src="{{ url_for('static', filename='js/nueva_orden.js') }}?v=7"></script>
 {% endblock %}

@@ -71,4 +71,5 @@ reset.py
 
 # Herramientas de agentes de IA (estado generado en local, no versionar)
 .atl/
+odd/
 

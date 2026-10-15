@@ -710,3 +710,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tipoLente) tipoLente.addEventListener('change', actualizarDisenoLente);
     if (marcaMultifocal) marcaMultifocal.addEventListener('change', actualizarModeloMultifocal);
 });
+
+// Vendedora: el combo ofrece la lista de la tienda y una opcion para escribir una
+// propia. El campo libre solo se muestra (y se exige) cuando se elige "Otro"; el
+// backend ignora su contenido en cualquier otro caso.
+document.addEventListener('DOMContentLoaded', function() {
+    const comboVendedora = document.getElementById('vendedora');
+    const campoVendedoraOtro = document.getElementById('vendedoraOtro');
+    if (!comboVendedora || !campoVendedoraOtro) return;
+
+    const valorOtro = comboVendedora.dataset.otro;
+
+    function sincronizarVendedora() {
+        const esOtro = comboVendedora.value === valorOtro;
+        campoVendedoraOtro.style.display = esOtro ? '' : 'none';
+        campoVendedoraOtro.required = esOtro;
+        if (esOtro) campoVendedoraOtro.focus();
+    }
+
+    comboVendedora.addEventListener('change', sincronizarVendedora);
+    sincronizarVendedora();
+});

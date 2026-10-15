@@ -4,13 +4,34 @@ Módulo de autenticación con Firebase Auth y Firestore
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Usar el cliente de Firestore ya inicializado
 from firebase_config import db
+
+# Caché de perfiles de usuario.
+#
+# Motivo: obtener_usuario_por_uid() se llama en cada request autenticado (guard de
+# sesión, /api/login_session, /api/me) y cada llamada cuesta un read a Firestore
+# (~300 ms medidos). El perfil cambia muy poco, así que se cachea con TTL corto.
+#
+# El TTL es deliberadamente bajo: también cubre la comprobación de `activo`, por lo
+# que un usuario desactivado pierde el acceso como máximo en USER_CACHE_DURATION
+# segundos. Toda escritura de perfil invalida su entrada de inmediato.
+_user_cache = {}
+_user_cache_duration = int(os.getenv('USER_CACHE_DURATION', os.getenv('CACHE_DURATION', 60)))
+
+
+def _invalidate_user_cache(uid=None):
+    """Descarta el perfil cacheado de un uid, o toda la caché si uid es None."""
+    if uid is None:
+        _user_cache.clear()
+    else:
+        _user_cache.pop(uid, None)
+
 
 def crear_usuario_empleado(email, password, nombre, rol, sucursal_id, celular=None):
     """
@@ -49,11 +70,15 @@ def crear_usuario_empleado(email, password, nombre, rol, sucursal_id, celular=No
             'celular': celular or '',
             'rol': rol,
             'sucursal_id': sucursal_id,
-            'fecha_creacion': datetime.utcnow(),
+            # S8: hora UTC timezone-aware; antes se usaba una llamada deprecada
+            # que devolvía un datetime naive.
+            'fecha_creacion': datetime.now(timezone.utc),
             'debeCambiarPassword': True,
             'activo': True
         })
         
+        _invalidate_user_cache(user.uid)
+
         return {
             'success': True,
             'uid': user.uid,
@@ -79,12 +104,17 @@ def obtener_usuario_por_uid(uid):
     Returns:
         dict: Datos del usuario o None
     """
+    cached = _user_cache.get(uid)
+    if cached and (datetime.now() - cached['timestamp']).total_seconds() < _user_cache_duration:
+        return dict(cached['data'])
+
     try:
         doc = db.collection('usuarios').document(uid).get()
         if doc.exists:
             usuario = doc.to_dict()
             usuario['uid'] = uid
-            return usuario
+            _user_cache[uid] = {'data': usuario, 'timestamp': datetime.now()}
+            return dict(usuario)
         return None
     except Exception as e:
         print(f'Error al obtener usuario: {str(e)}')
@@ -179,7 +209,9 @@ def actualizar_usuario(uid, datos):
         # 2. Actualizar Firestore
         if datos_firestore:
             db.collection('usuarios').document(uid).update(datos_firestore)
-            
+        
+        _invalidate_user_cache(uid)
+
         return {'success': True, 'mensaje': 'Usuario actualizado exitosamente'}
     
     except Exception as e:
@@ -205,6 +237,7 @@ def actualizar_perfil_usuario(uid, datos):
             return {'success': False, 'error': 'No hay campos válidos para actualizar'}
         
         db.collection('usuarios').document(uid).update(datos_filtrados)
+        _invalidate_user_cache(uid)
         return {'success': True, 'mensaje': 'Perfil actualizado exitosamente'}
     
     except Exception as e:
@@ -229,7 +262,8 @@ def cambiar_contrasena(uid, nueva_contrasena):
         db.collection('usuarios').document(uid).update({
             'debeCambiarPassword': False
         })
-        
+        _invalidate_user_cache(uid)
+
         return {'success': True, 'mensaje': 'Contraseña actualizada exitosamente'}
     
     except auth.InvalidPasswordError:
@@ -252,9 +286,12 @@ def eliminar_usuario(uid):
         # Soft delete - marcar como inactivo
         db.collection('usuarios').document(uid).update({
             'activo': False,
-            'fecha_eliminacion': datetime.utcnow()
+            # S8: hora UTC timezone-aware; antes se usaba una llamada deprecada
+            # que devolvía un datetime naive.
+            'fecha_eliminacion': datetime.now(timezone.utc)
         })
-        
+        _invalidate_user_cache(uid)
+
         return {'success': True, 'mensaje': 'Usuario desactivado exitosamente'}
     
     except Exception as e:
@@ -278,6 +315,7 @@ def eliminar_usuario_permanente(uid):
             pass
 
         db.collection('usuarios').document(uid).delete()
+        _invalidate_user_cache(uid)
 
         return {'success': True, 'mensaje': 'Usuario eliminado permanentemente'}
 

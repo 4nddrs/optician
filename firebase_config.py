@@ -1,5 +1,6 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
+from google.cloud.firestore_v1.field_path import FieldPath
 import os
 import json
 from functools import lru_cache
@@ -42,7 +43,9 @@ db = initialize_firebase()
 # Simple cache timestamp
 _cache = {
     'clients': {'data': None, 'timestamp': None},
-    'branches': {'data': None, 'timestamp': None}
+    'branches': {'data': None, 'timestamp': None},
+    'orders': {'data': None, 'timestamp': None},
+    'order_totals': {'data': None, 'timestamp': None}
 }
 _cache_duration = int(os.getenv('CACHE_DURATION', 60))  # Cache duration from env
 
@@ -52,6 +55,21 @@ def _is_cache_valid(cache_key):
         return False
     elapsed = (datetime.now() - _cache[cache_key]['timestamp']).total_seconds()
     return elapsed < _cache_duration
+
+
+def _invalidate_orders_cache():
+    """Descarta la lista de órdenes y sus totales agregados.
+
+    Toda escritura de orden debe llamar a esto para que una orden recién creada
+    aparezca de inmediato y los contadores del dashboard no queden desfasados.
+    """
+    for clave in ('orders', 'order_totals'):
+        _cache[clave]['timestamp'] = None
+
+
+# Estados canónicos de una orden de trabajo. Fuente única para validar (S3) y
+# contar (S2); no duplicar esta lista en otras capas.
+ESTADOS_ORDEN = ['Pendiente', 'Progreso', 'Listo', 'Entregado']
 
 # Client functions
 def get_all_clients():
@@ -124,6 +142,8 @@ def add_order_to_client(client_id, order_id):
     cliente_ref.update({
         'historial_ordenes': firestore.ArrayUnion([order_id])
     })
+    # Invalidate cache
+    _invalidate_orders_cache()
 
 # Branch functions
 def get_all_branches():
@@ -165,17 +185,146 @@ def update_branch(branch_id, data):
 
 # Work order functions
 def get_all_orders(limit=None):
-    """Get all work orders with optional limit"""
-    if limit is None:
+    """Get all work orders with optional limit.
+
+    Sin `limit` explícito se cachea con TTL igual que clientes y sucursales;
+    con `limit` se consulta directo porque es una vista parcial.
+    """
+    cacheable = limit is None
+    if cacheable:
+        if _is_cache_valid('orders'):
+            return _cache['orders']['data']
         limit = int(os.getenv('MAX_ORDERS_LIMIT', 100))
-    
+
     ordenes_ref = db.collection('ordenes_trabajo').order_by('fecha_creacion', direction=firestore.Query.DESCENDING).limit(limit)
     ordenes = []
     for doc in ordenes_ref.stream():
         orden = doc.to_dict()
         orden['id'] = doc.id
         ordenes.append(orden)
+
+    if cacheable:
+        _cache['orders']['data'] = ordenes
+        _cache['orders']['timestamp'] = datetime.now()
     return ordenes
+
+
+# Tamaño de página de /ordenes (S7). Configurable por entorno.
+ORDENES_PAGE_SIZE = int(os.getenv('ORDENES_PAGE_SIZE', 25))
+
+
+def _clave_fecha_creacion(orden):
+    """Clave de ordenamiento por fecha, tolerante a str ISO y a datetime."""
+    valor = orden.get('fecha_creacion')
+    if hasattr(valor, 'isoformat'):
+        return valor.isoformat()
+    return valor or ''
+
+
+def get_orders_page(estado=None, sucursal=None, q=None, page=1, page_size=None):
+    """Página de órdenes con los filtros aplicados en el servidor (S7).
+
+    Devuelve un dict con las órdenes de la página pedida, el total de
+    coincidencias y los metadatos de paginación que consume la plantilla.
+
+    Invariante: filtrar por un estado devuelve TODAS las órdenes de ese estado
+    repartidas en páginas; el conjunto nunca se recorta con MAX_ORDERS_LIMIT.
+
+    Nota de índices (medido): Firestore exige un índice compuesto para combinar
+    `where('estado', '==', ...)` con `order_by('fecha_creacion')`. Ese índice no
+    existe en el proyecto y la consulta nativa falla con FailedPrecondition
+    ("The query requires an index"), así que aquí se optó por:
+      - aplicar los filtros de igualdad en Firestore, que sí resuelve con los
+        índices de campo único automáticos (los combina por index merging);
+      - resolver el orden por fecha y el corte de página en el servidor de la
+        aplicación.
+    Es un compromiso deliberado y documentado: se lee el conjunto que casa con
+    el filtro (no solo la página visible), lo que es correcto y acotado por el
+    propio filtro. Cuando el índice compuesto exista, el corte puede moverse a
+    Firestore con `.order_by('fecha_creacion').start_after(...)`.
+    """
+    page_size = int(page_size or ORDENES_PAGE_SIZE)
+    page = max(1, int(page or 1))
+
+    estado = (estado or '').strip()
+    sucursal = (sucursal or '').strip()
+    q = (q or '').strip()
+
+    # Un estado fuera de ESTADOS_ORDEN no es un filtro válido: se ignora en vez
+    # de aplicarlo a ciegas. ESTADOS_ORDEN es la única fuente de estados válidos.
+    if estado and estado not in ESTADOS_ORDEN:
+        estado = ''
+
+    consulta = db.collection('ordenes_trabajo')
+    if estado:
+        consulta = consulta.where('estado', '==', estado)
+    if sucursal:
+        consulta = consulta.where('id_sucursal', '==', sucursal)
+
+    con_filtros = bool(estado or sucursal or q)
+    if not con_filtros:
+        # Sin filtros el orden nativo por fecha_creacion usa el índice de campo
+        # único automático y no necesita índice compuesto.
+        consulta = consulta.order_by('fecha_creacion', direction=firestore.Query.DESCENDING)
+
+    ordenes = []
+    for doc in consulta.stream():
+        orden = doc.to_dict()
+        orden['id'] = doc.id
+        ordenes.append(orden)
+
+    if q:
+        busqueda = q.lower()
+        ordenes = [o for o in ordenes if busqueda in (o.get('id_orden') or '').lower()]
+
+    if con_filtros:
+        # Orden por fecha en el servidor de la aplicación: ver nota de índices.
+        ordenes.sort(key=_clave_fecha_creacion, reverse=True)
+
+    total = len(ordenes)
+    total_paginas = max(1, (total + page_size - 1) // page_size)
+    page = min(page, total_paginas)
+    inicio = (page - 1) * page_size
+
+    return {
+        'ordenes': ordenes[inicio:inicio + page_size],
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+        'total_pages': total_paginas,
+        'has_prev': page > 1,
+        'has_next': page < total_paginas,
+    }
+
+
+def get_order_totals():
+    """Totales de órdenes para el dashboard, con la agregación count() de Firestore.
+
+    Dos consultas (total sin filtro y entregadas) en vez de traer documentos, así
+    el resultado no depende del tope MAX_ORDERS_LIMIT. `pendientes` se deriva en
+    el llamador como total - entregadas, para que la invariante se cumpla por
+    construcción.
+
+    Se cachea con el mismo TTL que las órdenes porque medimos que las
+    agregaciones count() se degradan al repetirse (~250 ms la primera, ~850 ms la
+    segunda), así que no deben ejecutarse en cada carga del dashboard.
+    """
+    if _is_cache_valid('order_totals'):
+        return _cache['order_totals']['data']
+
+    ordenes_ref = db.collection('ordenes_trabajo')
+
+    def _total():
+        return int(ordenes_ref.count().get()[0][0].value or 0)
+
+    def _entregadas():
+        return int(ordenes_ref.where('estado', '==', 'Entregado').count().get()[0][0].value or 0)
+
+    total, entregadas = _total(), _entregadas()
+    totales = {'total': total, 'entregadas': entregadas}
+    _cache['order_totals']['data'] = totales
+    _cache['order_totals']['timestamp'] = datetime.now()
+    return totales
 
 def get_order_by_id(order_id):
     """Get an order by ID"""
@@ -187,20 +336,34 @@ def get_order_by_id(order_id):
     return None
 
 def get_orders_by_ids(order_ids):
-    """Get multiple orders by their IDs, preserving the provided order."""
-    orders = []
-    seen = set()
+    """Get multiple orders by their IDs, preserving the provided order.
 
+    Usa consultas `in` por lotes de hasta 30 (límite de Firestore) en vez de un
+    read por orden, deduplicando los ids y saltando los vacíos o inexistentes.
+    """
+    ids_unicos = []
+    vistos = set()
     for order_id in order_ids or []:
-        if not order_id or order_id in seen:
+        if not order_id or order_id in vistos:
             continue
-        seen.add(order_id)
+        vistos.add(order_id)
+        ids_unicos.append(order_id)
 
-        orden = get_order_by_id(order_id)
-        if orden:
-            orders.append(orden)
+    if not ids_unicos:
+        return []
 
-    return orders
+    encontrados = {}
+    for inicio in range(0, len(ids_unicos), 30):
+        lote = ids_unicos[inicio:inicio + 30]
+        ordenes_ref = db.collection('ordenes_trabajo').where(
+            FieldPath.document_id(), 'in', lote
+        )
+        for doc in ordenes_ref.stream():
+            orden = doc.to_dict()
+            orden['id'] = doc.id
+            encontrados[doc.id] = orden
+
+    return [encontrados[oid] for oid in ids_unicos if oid in encontrados]
 
 def get_orders_by_branch(branch_id):
     """Get orders filtered by branch"""
@@ -259,19 +422,28 @@ def create_order(data):
     
     # Update client history
     add_order_to_client(data['id_cliente'], id_orden)
-    
+
+    # Invalidate cache
+    _invalidate_orders_cache()
+
     return id_orden
 
 def update_order(order_id, data):
     """Update an existing order"""
     db.collection('ordenes_trabajo').document(order_id).update(data)
+    # Invalidate cache
+    _invalidate_orders_cache()
 
 def update_order_status(order_id, new_status):
     """Update only the status of an order"""
     db.collection('ordenes_trabajo').document(order_id).update({
         'estado': new_status
     })
+    # Invalidate cache
+    _invalidate_orders_cache()
 
 def delete_order(order_id):
     """Delete a work order"""
     db.collection('ordenes_trabajo').document(order_id).delete()
+    # Invalidate cache
+    _invalidate_orders_cache()
